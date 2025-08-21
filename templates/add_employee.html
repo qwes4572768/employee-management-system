@@ -1,0 +1,382 @@
+{% extends "base.html" %}
+
+{% block title %}新增員工 - 員工管理系統{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">新增員工</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{{ url_for('employee_management') }}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>返回
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">
+            <i class="fas fa-user-plus me-2"></i>工作人員履歷表
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" class="needs-validation" novalidate>
+            <!-- 基本資料 -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h6 class="border-bottom pb-2">基本資料</h6>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="employee_id" class="form-label">員工編號 *</label>
+                    <input type="text" class="form-control" id="employee_id" name="employee_id" required>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="username" class="form-label">帳號 *</label>
+                    <input type="text" class="form-control" id="username" name="username" required>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="password" class="form-label">密碼 *</label>
+                    <input type="password" class="form-control" id="password" name="password" required>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="name" class="form-label">姓名 *</label>
+                    <input type="text" class="form-control" id="name" name="name" required>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">性別</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="gender" id="gender_male" value="男">
+                        <label class="form-check-label" for="gender_male">男</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="gender" id="gender_female" value="女">
+                        <label class="form-check-label" for="gender_female">女</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="birth_date" class="form-label">生日</label>
+                    <input type="date" class="form-control" id="birth_date" name="birth_date">
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">婚姻狀況</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="marital_status" id="marital_married" value="已婚">
+                        <label class="form-check-label" for="marital_married">已婚</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="marital_status" id="marital_unmarried" value="未婚">
+                        <label class="form-check-label" for="marital_unmarried">未婚</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="marital_status" id="marital_divorced" value="離婚">
+                        <label class="form-check-label" for="marital_divorced">離婚</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="id_number" class="form-label">身分證字號</label>
+                    <input type="text" class="form-control" id="id_number" name="id_number">
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="address" class="form-label">地址</label>
+                    <input type="text" class="form-control" id="address" name="address">
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="household_address" class="form-label">戶籍地</label>
+                    <input type="text" class="form-control" id="household_address" name="household_address">
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" class="form-control" id="email" name="email">
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="contact_phone" class="form-label">連絡電話</label>
+                    <input type="tel" class="form-control" id="contact_phone" name="contact_phone">
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="mobile_phone" class="form-label">行動電話</label>
+                    <input type="tel" class="form-control" id="mobile_phone" name="mobile_phone">
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="physical_condition" class="form-label">身體狀況</label>
+                    <textarea class="form-control" id="physical_condition" name="physical_condition" rows="2" placeholder="請說明身體狀況，如：高血壓、糖尿病等"></textarea>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="height" class="form-label">身高 (cm)</label>
+                    <input type="number" class="form-control" id="height" name="height">
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="weight" class="form-label">體重 (kg)</label>
+                    <input type="number" class="form-control" id="weight" name="weight">
+                </div>
+            </div>
+            
+            <!-- 緊急聯絡人 -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h6 class="border-bottom pb-2">緊急聯絡人資料</h6>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="emergency_contact_name" class="form-label">緊急聯絡人姓名</label>
+                    <input type="text" class="form-control" id="emergency_contact_name" name="emergency_contact_name">
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="emergency_contact_relation" class="form-label">關係</label>
+                    <input type="text" class="form-control" id="emergency_contact_relation" name="emergency_contact_relation">
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="emergency_contact_phone" class="form-label">連絡電話</label>
+                    <input type="tel" class="form-control" id="emergency_contact_phone" name="emergency_contact_phone">
+                </div>
+            </div>
+            
+            <!-- 學歷與經歷 -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h6 class="border-bottom pb-2">學歷與經歷</h6>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="education" class="form-label">學歷</label>
+                    <textarea class="form-control" id="education" name="education" rows="3" placeholder="請填寫學歷資料，包含學校、科系、畢業狀態等"></textarea>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="work_experience" class="form-label">工作經歷</label>
+                    <textarea class="form-control" id="work_experience" name="work_experience" rows="3" placeholder="請填寫工作經歷，包含服務單位、職稱、薪資、到職日、離職日、離職原因等"></textarea>
+                </div>
+            </div>
+            
+            <!-- 家庭狀況 -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h6 class="border-bottom pb-2">家庭狀況</h6>
+                </div>
+                
+                <div class="col-12 mb-3">
+                    <label for="family_status" class="form-label">家庭成員</label>
+                    <textarea class="form-control" id="family_status" name="family_status" rows="3" placeholder="請填寫家庭成員資料，包含稱謂、姓名、年齡、職業等"></textarea>
+                </div>
+            </div>
+            
+            <!-- 專長與證照 -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h6 class="border-bottom pb-2">專長與證照</h6>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="specialty" class="form-label">專長</label>
+                    <textarea class="form-control" id="specialty" name="specialty" rows="2"></textarea>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="hobbies" class="form-label">興趣</label>
+                    <textarea class="form-control" id="hobbies" name="hobbies" rows="2"></textarea>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="insurance" class="form-label">保險</label>
+                    <input type="text" class="form-control" id="insurance" name="insurance">
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="vision" class="form-label">視力</label>
+                    <input type="text" class="form-control" id="vision" name="vision">
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="languages" class="form-label">語言能力</label>
+                    <input type="text" class="form-control" id="languages" name="languages" placeholder="如：國、台、客、英、日">
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="driver_license" class="form-label">駕照</label>
+                    <input type="text" class="form-control" id="driver_license" name="driver_license" placeholder="如：汽車、機車">
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="military_service" class="form-label">兵役</label>
+                    <select class="form-select" id="military_service" name="military_service">
+                        <option value="">請選擇</option>
+                        <option value="志願役">志願役</option>
+                        <option value="義務役">義務役</option>
+                        <option value="免役">免役</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label for="military_branch" class="form-label">軍種</label>
+                    <input type="text" class="form-control" id="military_branch" name="military_branch">
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="certifications" class="form-label">證照種類</label>
+                    <textarea class="form-control" id="certifications" name="certifications" rows="2"></textarea>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">財務報表</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="financial_reports" id="financial_yes" value="會">
+                        <label class="form-check-label" for="financial_yes">會</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="financial_reports" id="financial_no" value="不會">
+                        <label class="form-check-label" for="financial_no">不會</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label class="form-label">電腦專長</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="computer_skills" value="Excel">
+                        <label class="form-check-label">Excel</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="computer_skills" value="Word">
+                        <label class="form-check-label">Word</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="computer_skills" value="PPT">
+                        <label class="form-check-label">PPT</label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 投保項目與素行紀錄 -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h6 class="border-bottom pb-2">投保項目與素行紀錄</h6>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">投保項目</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="insurance_items" value="健保">
+                        <label class="form-check-label">健保</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="insurance_items" value="眷屬加保">
+                        <label class="form-check-label">眷屬加保</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="insurance_items" value="勞保">
+                        <label class="form-check-label">勞保</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="insurance_items" value="勞保職災">
+                        <label class="form-check-label">勞保職災</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="insurance_items" value="團保">
+                        <label class="form-check-label">團保</label>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">素行紀錄</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="criminal_record" id="criminal_no" value="無前科">
+                        <label class="form-check-label" for="criminal_no">無前科</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="criminal_record" id="criminal_yes" value="有前科">
+                        <label class="form-check-label" for="criminal_yes">有前科</label>
+                    </div>
+                    <div class="mt-2">
+                        <textarea class="form-control" name="criminal_record_details" rows="2" placeholder="如有前科請詳述"></textarea>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 特殊身分 -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h6 class="border-bottom pb-2">特殊身分</h6>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="special_status" class="form-label">身分別</label>
+                    <textarea class="form-control" id="special_status" name="special_status" rows="2" placeholder="如：原住民、身心障礙手冊、低收入戶、失業滿一年、滿45歲以上、榮民證等"></textarea>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label for="disability_status" class="form-label">身心障礙身份</label>
+                    <textarea class="form-control" id="disability_status" name="disability_status" rows="2" placeholder="請務必據實告知，如：身障、肢障等"></textarea>
+                </div>
+            </div>
+            
+            <div class="text-center">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="fas fa-save me-2"></i>儲存員工資料
+                </button>
+                <a href="{{ url_for('employee_management') }}" class="btn btn-secondary btn-lg ms-2">
+                    <i class="fas fa-times me-2"></i>取消
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// 表單驗證
+(function() {
+    'use strict';
+    window.addEventListener('load', function() {
+        var forms = document.getElementsByClassName('needs-validation');
+        var validation = Array.prototype.filter.call(forms, function(form) {
+            form.addEventListener('submit', function(event) {
+                if (form.checkValidity() === false) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+                form.classList.add('was-validated');
+            }, false);
+        });
+    }, false);
+})();
+
+// 處理複選框的值
+document.querySelector('form').addEventListener('submit', function(e) {
+    // 處理電腦專長
+    const computerSkills = document.querySelectorAll('input[name="computer_skills"]:checked');
+    const computerSkillsArray = Array.from(computerSkills).map(cb => cb.value);
+    const computerSkillsInput = document.createElement('input');
+    computerSkillsInput.type = 'hidden';
+    computerSkillsInput.name = 'computer_skills';
+    computerSkillsInput.value = computerSkillsArray.join(', ');
+    this.appendChild(computerSkillsInput);
+    
+    // 處理投保項目
+    const insuranceItems = document.querySelectorAll('input[name="insurance_items"]:checked');
+    const insuranceItemsArray = Array.from(insuranceItems).map(cb => cb.value);
+    const insuranceItemsInput = document.createElement('input');
+    insuranceItemsInput.type = 'hidden';
+    insuranceItemsInput.name = 'insurance_items';
+    insuranceItemsInput.value = insuranceItemsArray.join(', ');
+    this.appendChild(insuranceItemsInput);
+});
+</script>
+{% endblock %}
