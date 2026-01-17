@@ -26,6 +26,8 @@ Flutter app, Firebase backend assets, and admin console scope docs.
    - `cd web_demo`
    - `python -m http.server 8000`
    - Visit `http://localhost:8000`
+3. Single file for mobile:
+   - `web_demo/party_king_demo_single.html`
 
 ## Notes
 This repo contains a minimum working UI scaffold. Backend integration and admin

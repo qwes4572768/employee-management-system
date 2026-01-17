@@ -5,6 +5,8 @@ Bot 行為，方便在手機瀏覽器直接體驗。
 
 ## 使用方式
 1. 直接用瀏覽器開啟 `index.html`
+2. 手機沒有電腦時，可用單檔版：
+   - `party_king_demo_single.html`
 2. 或用簡單靜態伺服器：
    - `python -m http.server 8000`
    - 瀏覽 `http://localhost:8000`
