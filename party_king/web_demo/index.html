@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>派對王 Web 測試</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="top-bar">
+        <div class="title">
+          <h1>派對王</h1>
+          <p>Web 測試版：配對 / 聊天 / 語音房掛機升等</p>
+        </div>
+        <div class="player-meta">
+          <div class="stat">
+            <span class="label">玩家等級</span>
+            <span class="value" id="player-level">1</span>
+          </div>
+          <div class="stat">
+            <span class="label">配對剩餘</span>
+            <span class="value" id="likes-remaining">20</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="content">
+        <section class="panel match-panel">
+          <div class="panel-header">
+            <h2>配對</h2>
+            <button class="ghost" id="refresh-bot">換一個</button>
+          </div>
+          <div class="match-card" id="match-card"></div>
+          <div class="match-actions">
+            <button class="secondary" id="skip-bot">略過</button>
+            <button class="primary" id="like-bot">喜歡</button>
+          </div>
+          <div class="hint">篩選：性別/年齡/每日上限（示意）</div>
+        </section>
+
+        <section class="panel rooms-panel">
+          <div class="panel-header">
+            <h2>語音房</h2>
+            <span class="badge">公開/私密</span>
+          </div>
+          <div class="room-card">
+            <div>
+              <div class="room-title">派對大廳</div>
+              <div class="room-subtitle">公開 · 18 人</div>
+            </div>
+            <button class="outline">進入</button>
+          </div>
+          <div class="room-card">
+            <div>
+              <div class="room-title">深夜聊聊</div>
+              <div class="room-subtitle">公開 · 8 人</div>
+            </div>
+            <button class="outline">進入</button>
+          </div>
+          <div class="room-card">
+            <div>
+              <div class="room-title">私密小包廂</div>
+              <div class="room-subtitle">私密 · 3 人</div>
+            </div>
+            <button class="outline">進入</button>
+          </div>
+          <div class="idle-box">
+            <div class="idle-title">掛機升等</div>
+            <div class="idle-stats">
+              <span>累積時間</span>
+              <strong id="idle-time">00:00</strong>
+            </div>
+            <button class="primary" id="toggle-idle">開始掛機</button>
+          </div>
+        </section>
+
+        <section class="panel chat-panel">
+          <div class="panel-header">
+            <h2>聊天</h2>
+            <div class="chat-peer" id="chat-peer">尚未配對</div>
+          </div>
+          <div class="match-list" id="match-list"></div>
+          <div class="chat-window" id="chat-window">
+            <div class="empty">先配對一位假人開始聊天</div>
+          </div>
+          <div class="chat-input">
+            <input
+              id="chat-input"
+              type="text"
+              placeholder="輸入訊息，試試：猜拳 / 猜 3 / 想玩遊戲"
+            />
+            <button id="send-message" class="primary">送出</button>
+          </div>
+          <div class="hint">提示：輸入「猜拳」或「猜 1~5」會進入小遊戲。</div>
+        </section>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+    <script src="app.js"></script>
+  </body>
+</html>

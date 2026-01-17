@@ -20,6 +20,13 @@ Flutter app, Firebase backend assets, and admin console scope docs.
    - `flutter pub get`
    - `flutter run`
 
+## Web demo (no build)
+1. Open `web_demo/index.html` in a browser.
+2. Or run a local server:
+   - `cd web_demo`
+   - `python -m http.server 8000`
+   - Visit `http://localhost:8000`
+
 ## Notes
 This repo contains a minimum working UI scaffold. Backend integration and admin
 console implementation are planned in `docs/` and `backend/`.
