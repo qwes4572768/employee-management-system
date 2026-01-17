@@ -229,3 +229,7 @@ __marimo__/
 firebase-debug.log
 firestore-debug.log
 ui-debug.log
+
+# Allow Flutter lib sources in this repo
+!party_king/app/lib/
+!party_king/app/lib/**
