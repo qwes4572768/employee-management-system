@@ -1,0 +1,60 @@
+import { Redirect, Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+
+import { useSession } from '@/providers/SessionProvider';
+import { useTheme } from '@/theme/ThemeProvider';
+
+export default function MainLayout() {
+  const { session, user, can } = useSession();
+  const { colors, fontScale } = useTheme();
+  const showManage =
+    can('users.view') ||
+    can('sites.view') ||
+    can('roles.view') ||
+    can('audit.view') ||
+    can('accounts.view') ||
+    can('tenants.view');
+
+  if (!session || user?.status !== 'active') {
+    return <Redirect href="/(auth)/login" />;
+  }
+
+  return (
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarStyle: {
+          backgroundColor: colors.tabBar,
+          borderTopColor: colors.border,
+          minHeight: 58,
+        },
+        tabBarActiveTintColor: colors.accent,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarLabelStyle: { fontSize: fontScale === 'xlarge' ? 12 : 11 },
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: '首頁',
+          tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="manage"
+        options={{
+          title: '管理',
+          href: showManage ? undefined : null,
+          tabBarIcon: ({ color, size }) => <Ionicons name="construct-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="me"
+        options={{
+          title: '我的',
+          tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" color={color} size={size} />,
+        }}
+      />
+    </Tabs>
+  );
+}

@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "勤管系統",
+    "slug": "qinguan-system",
+    "scheme": "qinguan",
+    "version": "1.0.0",
+    "orientation": "default",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.qinguan.system",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "勤管系統需要存取相簿以設定個人與公司照片。",
+        "NSCameraUsageDescription": "勤管系統需要使用相機以拍攝個人與公司照片。"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#050A14",
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.qinguan.system",
+      "softwareKeyboardLayoutMode": "resize",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "expo-secure-store",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#050A14",
+          "image": "./assets/splash.png",
+          "imageWidth": 200
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "勤管系統需要存取相簿以設定個人與公司照片。",
+          "cameraPermission": "勤管系統需要使用相機以拍攝個人與公司照片。"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
