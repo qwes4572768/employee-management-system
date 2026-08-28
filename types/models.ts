@@ -60,6 +60,7 @@ export interface User extends SyncMeta {
   photoUri: string | null;
   status: UserStatus;
   reviewNote: string | null;
+  staffingMode: 'fixed' | 'mobile' | 'trainee';
 }
 
 export interface Role extends SyncMeta {

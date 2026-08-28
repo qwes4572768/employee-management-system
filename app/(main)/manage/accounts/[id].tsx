@@ -8,6 +8,8 @@ import { ButtonRow, QinButton } from '@/components/ui/QinButton';
 import { QinSelect } from '@/components/ui/QinSelect';
 import { SwitchRow } from '@/components/ui/SwitchRow';
 import { GENDER_LABELS, USER_STATUS_LABELS } from '@/constants/app';
+import { STAFFING_MODE_LABELS, STAFFING_MODES, isStaffingMode } from '@/constants/staffing';
+import { setUserStaffingMode } from '@/services/scheduleService';
 import { useSession } from '@/providers/SessionProvider';
 import { listSites } from '@/repositories/siteRepository';
 import { listUserRoles } from '@/repositories/permissionRepository';
@@ -69,8 +71,21 @@ export default function AccountDetailScreen() {
         {user.account} · {USER_STATUS_LABELS[user.status]} · {GENDER_LABELS[user.gender]}
       </Text>
       <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginBottom: spacing.lg })}>
-        員工編號 {user.employeeNo ?? '—'} · 職稱 {user.jobTitle ?? '—'} · 到職 {formatDateZh(user.hireDate)}
+        員工編號 {user.employeeNo ?? '—'} · 職稱 {user.jobTitle ?? '—'} · 到職 {formatDateZh(user.hireDate)} · {STAFFING_MODE_LABELS[user.staffingMode]}
       </Text>
+      {can('users.update') ? (
+        <QinSelect
+          label="人員勤務型態"
+          value={user.staffingMode}
+          options={Object.values(STAFFING_MODES).map((value) => ({ value, label: STAFFING_MODE_LABELS[value] }))}
+          onChange={(value) => {
+            if (!isStaffingMode(value)) return;
+            void setUserStaffingMode(actor, user.id, value)
+              .then(load)
+              .catch((err) => setError(err instanceof Error ? err.message : '更新失敗'));
+          }}
+        />
+      ) : null}
       <ErrorBanner message={error} />
       {can('users.update') && user.status === 'active' ? (
         <QinButton label="停權" variant="danger" onPress={() => void setAccountStatus(actor, user.id, 'suspended').then(load)} />

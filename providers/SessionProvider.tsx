@@ -99,6 +99,14 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const refresh = useCallback(async () => {
     configureKvStore(deviceKv);
     await initializeAppDatabase();
+    if (Platform.OS !== 'web') {
+      try {
+        const { createExpoLocationProvider, setLocationProvider } = await import('@/services/locationProvider');
+        setLocationProvider(await createExpoLocationProvider());
+      } catch {
+        // 測試或權限環境可改用 Mock LocationProvider
+      }
+    }
     const deviceId = await getDeviceId();
     const appVersion = await getAppVersion();
     const complete = (await countTenants()) > 0;

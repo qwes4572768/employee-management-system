@@ -26,6 +26,14 @@ export default function ManageStack() {
       <Stack.Screen name="roles/new" options={{ title: '新增角色' }} />
       <Stack.Screen name="roles/[id]" options={{ title: '角色設定' }} />
       <Stack.Screen name="audit/index" options={{ title: '操作日誌' }} />
+      <Stack.Screen name="shifts/index" options={{ title: '班別設定' }} />
+      <Stack.Screen name="shifts/new" options={{ title: '新增班別' }} />
+      <Stack.Screen name="schedules/index" options={{ title: '智慧排班' }} />
+      <Stack.Screen name="schedules/new" options={{ title: '新增排班' }} />
+      <Stack.Screen name="corrections/index" options={{ title: '補卡審核' }} />
+      <Stack.Screen name="leave-review/index" options={{ title: '請假審核' }} />
+      <Stack.Screen name="leave-review/[id]" options={{ title: '假勤審核' }} />
+      <Stack.Screen name="workforce" options={{ title: '勤務與假勤設定' }} />
     </Stack>
   );
 }

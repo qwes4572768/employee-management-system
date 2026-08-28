@@ -51,4 +51,13 @@ export async function setAccountStatus(
   return after;
 }
 
+export async function updateStaffingMode(
+  actor: ActorContext,
+  userId: string,
+  staffingMode: import('@/constants/staffing').StaffingMode,
+) {
+  const { setUserStaffingMode } = await import('./scheduleService');
+  return setUserStaffingMode(actor, userId, staffingMode);
+}
+
 export { getUserById, listUserRoles, listUserSitePermissions };

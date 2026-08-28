@@ -7,13 +7,16 @@ import { useTheme } from '@/theme/ThemeProvider';
 export default function MainLayout() {
   const { session, user, can } = useSession();
   const { colors, fontScale } = useTheme();
-  const showManage =
+      const showManage =
     can('users.view') ||
     can('sites.view') ||
     can('roles.view') ||
     can('audit.view') ||
     can('accounts.view') ||
-    can('tenants.view');
+    can('tenants.view') ||
+    can('schedule.view') ||
+    can('leave.view') ||
+    can('attendance.correct.approve');
 
   if (!session || user?.status !== 'active') {
     return <Redirect href="/(auth)/login" />;
@@ -38,6 +41,13 @@ export default function MainLayout() {
         options={{
           title: '首頁',
           tabBarIcon: ({ color, size }) => <Ionicons name="grid-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="duty"
+        options={{
+          title: '勤務',
+          tabBarIcon: ({ color, size }) => <Ionicons name="shield-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen

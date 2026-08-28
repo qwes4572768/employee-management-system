@@ -22,7 +22,8 @@
         "CFBundleDisplayName": "勤管系統",
         "CFBundleName": "勤管系統",
         "NSPhotoLibraryUsageDescription": "勤管系統需要存取相簿以設定個人與公司照片。",
-        "NSCameraUsageDescription": "勤管系統需要使用相機以拍攝個人與公司照片。"
+        "NSCameraUsageDescription": "勤管系統需要使用相機以拍攝個人與公司照片。",
+        "NSLocationWhenInUseUsageDescription": "勤管系統需要使用定位以進行 GPS 出勤打卡。"
       }
     },
     "android": {
@@ -38,7 +39,9 @@
       "softwareKeyboardLayoutMode": "resize",
       "permissions": [
         "android.permission.CAMERA",
-        "android.permission.READ_MEDIA_IMAGES"
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ]
     },
     "web": {
@@ -69,6 +72,12 @@
         {
           "photosPermission": "勤管系統需要存取相簿以設定個人與公司照片。",
           "cameraPermission": "勤管系統需要使用相機以拍攝個人與公司照片。"
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "勤管系統需要使用定位以進行 GPS 出勤打卡。"
         }
       ]
     ],

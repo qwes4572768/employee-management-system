@@ -59,6 +59,10 @@ export const MODULE_LABELS: Record<string, string> = {
   accounts: '帳號審核',
   auth: '登入',
   profile: '個人資料',
+  schedule: '排班',
+  attendance: '出勤',
+  workSession: '勤務',
+  leave: '假勤',
 };
 
 export const ACTION_LABELS: Record<string, string> = {

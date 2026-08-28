@@ -8,6 +8,8 @@ import { insertRole } from '@/repositories/roleRepository';
 import { assignUserRole, setRolePermissions } from '@/repositories/permissionRepository';
 import { insertTenant } from '@/repositories/tenantRepository';
 import { insertUser } from '@/repositories/userRepository';
+import { ensureTenantWorkforceDefaults } from '@/repositories/workforceRepository';
+import { ensureLeavePolicy } from '@/repositories/leaveRepository';
 import type { Gender, Tenant, User } from '@/types';
 import { hashPassword, validatePasswordStrength } from '@/utils/password';
 import {
@@ -103,6 +105,8 @@ export async function bootstrapSystem(input: {
     createdBy: null,
     deviceId: input.actor.deviceId,
   });
+  await ensureTenantWorkforceDefaults(tenant.id);
+  await ensureLeavePolicy(tenant.id);
 
   const user = await insertUser({
     tenantId: tenant.id,

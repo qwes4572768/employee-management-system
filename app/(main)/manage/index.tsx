@@ -35,6 +35,21 @@ export default function ManageHome() {
       {can('audit.view') ? (
         <ListRow title="操作日誌" subtitle="完整紀錄操作者姓名與時間" onPress={() => router.push('/(main)/manage/audit')} />
       ) : null}
+      {can('schedule.view') || can('schedule.create') ? (
+        <ListRow title="班別設定" subtitle="建立可自由命名的班別樣板" onPress={() => router.push('/(main)/manage/shifts')} />
+      ) : null}
+      {can('schedule.view') || can('schedule.create') ? (
+        <ListRow title="智慧排班" subtitle="撞班、休息不足、見習重疊與批次複製" onPress={() => router.push('/(main)/manage/schedules')} />
+      ) : null}
+      {can('attendance.correct.approve') ? (
+        <ListRow title="補卡審核" subtitle="核准或拒絕出勤更正" onPress={() => router.push('/(main)/manage/corrections')} />
+      ) : null}
+      {can('leave.view') || can('leave.approve') ? (
+        <ListRow title="請假審核" subtitle="假勤核准、補件與人力影響" onPress={() => router.push('/(main)/manage/leave-review')} />
+      ) : null}
+      {can('leave.policy.manage') || can('leave.policy.view') ? (
+        <ListRow title="勤務與假勤設定" subtitle="休息、遲到寬限與請假政策" onPress={() => router.push('/(main)/manage/workforce')} />
+      ) : null}
     </Screen>
   );
 }
