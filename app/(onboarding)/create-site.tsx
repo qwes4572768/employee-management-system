@@ -1,4 +1,3 @@
-import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text } from 'react-native';
 
@@ -8,17 +7,19 @@ import { QinButton, ButtonRow } from '@/components/ui/QinButton';
 import { QinInput } from '@/components/ui/QinInput';
 import { SwitchRow } from '@/components/ui/SwitchRow';
 import { getOnboardingDraft, patchOnboardingDraft, resetOnboardingDraft } from '@/features/onboarding/draft';
+import { useEnterAppWhenReady } from '@/hooks/useEnterApp';
 import { useSession } from '@/providers/SessionProvider';
 import { bootstrapSystem } from '@/services/bootstrapService';
 import { getAppVersion, getDeviceId } from '@/services/sessionStore';
 import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
+import { parseOptionalNumber } from '@/utils/validation';
 
 export default function CreateSiteScreen() {
-  const router = useRouter();
   const { colors, fontScale } = useTheme();
   const { refresh } = useSession();
+  const { entering, enterApp } = useEnterAppWhenReady();
   const [form, setForm] = useState(getOnboardingDraft().site);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -43,7 +44,7 @@ export default function CreateSiteScreen() {
               siteCode: draft.site.siteCode,
               name: draft.site.name,
               address: draft.site.address,
-              attendanceRadius: draft.site.attendanceRadius ? Number(draft.site.attendanceRadius) : null,
+              attendanceRadius: parseOptionalNumber(draft.site.attendanceRadius, '出勤半徑'),
               requireGps: draft.site.requireGps,
               requireSiteQr: draft.site.requireSiteQr,
             }
@@ -61,12 +62,22 @@ export default function CreateSiteScreen() {
       });
       resetOnboardingDraft();
       await refresh();
-      router.replace('/(main)');
+      enterApp();
     } catch (err) {
       setError(err instanceof Error ? err.message : '初始化失敗');
     } finally {
       setLoading(false);
     }
+  };
+
+  const completeWithOptionalSite = () => {
+    const hasCode = Boolean(form.siteCode.trim());
+    const hasName = Boolean(form.name.trim());
+    if (hasCode !== hasName) {
+      setError('請同時填寫案場代碼與名稱，或改點「稍後再建立案場」');
+      return;
+    }
+    void finish(hasCode && hasName);
   };
 
   return (
@@ -93,8 +104,17 @@ export default function CreateSiteScreen() {
       <SwitchRow label="未來需要 GPS 打卡" value={form.requireGps} onValueChange={(v) => update('requireGps', v)} />
       <SwitchRow label="未來需要案場 QR" value={form.requireSiteQr} onValueChange={(v) => update('requireSiteQr', v)} />
       <ButtonRow>
-        <QinButton label="完成並進入首頁" loading={loading} onPress={() => void finish(Boolean(form.name && form.siteCode))} />
-        <QinButton label="稍後再建立案場" variant="secondary" disabled={loading} onPress={() => void finish(false)} />
+        <QinButton
+          label="完成並進入首頁"
+          loading={loading || entering}
+          onPress={completeWithOptionalSite}
+        />
+        <QinButton
+          label="稍後再建立案場"
+          variant="secondary"
+          disabled={loading || entering}
+          onPress={() => void finish(false)}
+        />
       </ButtonRow>
     </Screen>
   );

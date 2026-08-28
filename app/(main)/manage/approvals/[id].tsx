@@ -8,7 +8,7 @@ import { ButtonRow, QinButton } from '@/components/ui/QinButton';
 import { QinInput } from '@/components/ui/QinInput';
 import { QinSelect } from '@/components/ui/QinSelect';
 import { SwitchRow } from '@/components/ui/SwitchRow';
-import { GENDER_LABELS } from '@/constants/app';
+import { GENDER_LABELS, ROLE_KEYS } from '@/constants/app';
 import { buildPermissionCatalog } from '@/constants/permissions';
 import { useSession } from '@/providers/SessionProvider';
 import { listRoles } from '@/repositories/roleRepository';
@@ -46,7 +46,12 @@ export default function ApprovalDetailScreen() {
       const item = await getUserById(id);
       setUser(item);
       const rs = await listRoles(tenant.id);
-      setRoles(rs.filter((role) => role.status === 'active'));
+      const activeRoles = rs.filter((role) => role.status === 'active');
+      setRoles(activeRoles);
+      const staff = activeRoles.find((role) => role.roleKey === ROLE_KEYS.STAFF) ?? activeRoles[0];
+      if (staff) {
+        setRoleId(staff.id);
+      }
       const ss = await listSites(tenant.id);
       setSites(ss.filter((site) => site.status === 'active'));
     })();
@@ -94,6 +99,10 @@ export default function ApprovalDetailScreen() {
           onPress={() => {
             void (async () => {
               if (!tenant) return;
+              if (!roleId) {
+                setError('請選擇核准後角色');
+                return;
+              }
               setError(null);
               try {
                 await reviewAccount(actor, user.id, 'active', note || null);

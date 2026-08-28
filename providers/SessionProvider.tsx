@@ -7,6 +7,7 @@ import { countTenants, getTenantById } from '@/repositories/tenantRepository';
 import { getUserById } from '@/repositories/userRepository';
 import { getEffectivePermissionKeys, getEffectiveRoles, roleSnapshotForUser } from '@/services/permissionService';
 import {
+  clearSession,
   configureKvStore,
   getAppVersion,
   getDeviceId,
@@ -35,26 +36,42 @@ export interface SessionContextValue {
 
 const SessionContext = createContext<SessionContextValue | null>(null);
 
+const memoryFallback = new Map<string, string>();
+
 const deviceKv: KvStore = {
   async get(key) {
-    if (Platform.OS === 'web') {
-      return globalThis.localStorage?.getItem(key) ?? null;
+    try {
+      if (Platform.OS === 'web') {
+        return globalThis.localStorage?.getItem(key) ?? memoryFallback.get(key) ?? null;
+      }
+      return (await SecureStore.getItemAsync(key)) ?? memoryFallback.get(key) ?? null;
+    } catch {
+      return memoryFallback.get(key) ?? null;
     }
-    return SecureStore.getItemAsync(key);
   },
   async set(key, value) {
-    if (Platform.OS === 'web') {
-      globalThis.localStorage?.setItem(key, value);
-      return;
+    memoryFallback.set(key, value);
+    try {
+      if (Platform.OS === 'web') {
+        globalThis.localStorage?.setItem(key, value);
+        return;
+      }
+      await SecureStore.setItemAsync(key, value);
+    } catch {
+      // Keep the in-memory copy so the current session still works.
     }
-    await SecureStore.setItemAsync(key, value);
   },
   async delete(key) {
-    if (Platform.OS === 'web') {
-      globalThis.localStorage?.removeItem(key);
-      return;
+    memoryFallback.delete(key);
+    try {
+      if (Platform.OS === 'web') {
+        globalThis.localStorage?.removeItem(key);
+        return;
+      }
+      await SecureStore.deleteItemAsync(key);
+    } catch {
+      // Ignore storage failures after the in-memory value is cleared.
     }
-    await SecureStore.deleteItemAsync(key);
   },
 };
 
@@ -110,6 +127,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }
     const nextUser = await getUserById(loaded.userId);
     if (!nextUser || nextUser.status !== 'active') {
+      await clearSession();
       setSession(null);
       setUser(nextUser);
       setReady(true);

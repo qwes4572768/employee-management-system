@@ -8,6 +8,7 @@ import { QinInput } from '@/components/ui/QinInput';
 import { SwitchRow } from '@/components/ui/SwitchRow';
 import { useSession } from '@/providers/SessionProvider';
 import { createSite } from '@/services/siteService';
+import { parseOptionalNumber } from '@/utils/validation';
 
 export default function NewSiteScreen() {
   const router = useRouter();
@@ -52,9 +53,9 @@ export default function NewSiteScreen() {
                 siteCode: form.siteCode,
                 name: form.name,
                 address: form.address,
-                latitude: form.latitude ? Number(form.latitude) : null,
-                longitude: form.longitude ? Number(form.longitude) : null,
-                attendanceRadius: form.attendanceRadius ? Number(form.attendanceRadius) : null,
+                latitude: parseOptionalNumber(form.latitude, '緯度'),
+                longitude: parseOptionalNumber(form.longitude, '經度'),
+                attendanceRadius: parseOptionalNumber(form.attendanceRadius, '出勤半徑'),
                 requireGps: form.requireGps,
                 requireSiteQr: form.requireSiteQr,
               });

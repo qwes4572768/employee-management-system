@@ -6,6 +6,7 @@ import { Screen } from '@/components/layout/Screen';
 import { ErrorBanner, InfoBanner } from '@/components/ui/Banners';
 import { QinButton } from '@/components/ui/QinButton';
 import { QinInput } from '@/components/ui/QinInput';
+import { useEnterAppWhenReady } from '@/hooks/useEnterApp';
 import { useSession } from '@/providers/SessionProvider';
 import { login } from '@/services/authService';
 import { getAppVersion, getDeviceId } from '@/services/sessionStore';
@@ -16,6 +17,7 @@ import { textStyle } from '@/theme/typography';
 export default function LoginScreen() {
   const router = useRouter();
   const { refresh } = useSession();
+  const { entering, enterApp } = useEnterAppWhenReady();
   const { colors, fontScale } = useTheme();
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
@@ -38,7 +40,7 @@ export default function LoginScreen() {
       <QinInput label="密碼" value={password} onChangeText={setPassword} secure />
       <QinButton
         label="登入"
-        loading={loading}
+        loading={loading || entering}
         onPress={() => {
           void (async () => {
             setError(null);
@@ -57,7 +59,7 @@ export default function LoginScreen() {
               };
               await login(account, password, actor);
               await refresh();
-              router.replace('/(main)');
+              enterApp();
             } catch (err) {
               const code = (err as { code?: string }).code;
               const message = err instanceof Error ? err.message : '登入失敗';

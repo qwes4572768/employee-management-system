@@ -15,6 +15,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
 import type { Site } from '@/types';
+import { parseOptionalNumber } from '@/utils/validation';
 
 export default function SiteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -98,9 +99,9 @@ export default function SiteDetailScreen() {
                   siteCode: form.siteCode,
                   name: form.name,
                   address: form.address,
-                  latitude: form.latitude ? Number(form.latitude) : null,
-                  longitude: form.longitude ? Number(form.longitude) : null,
-                  attendanceRadius: form.attendanceRadius ? Number(form.attendanceRadius) : null,
+                  latitude: parseOptionalNumber(form.latitude, '緯度'),
+                  longitude: parseOptionalNumber(form.longitude, '經度'),
+                  attendanceRadius: parseOptionalNumber(form.attendanceRadius, '出勤半徑'),
                   requireGps: form.requireGps,
                   requireSiteQr: form.requireSiteQr,
                 });

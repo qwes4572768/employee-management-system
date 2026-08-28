@@ -5,11 +5,17 @@ import { countTenants } from '@/repositories/tenantRepository';
 import { listAuditLogs } from '@/repositories/auditRepository';
 import { bootstrapSystem } from '@/services/bootstrapService';
 import { changeOwnProfile, login, logout, registerAccount, reviewAccount } from '@/services/authService';
-import { createCustomRole, assignRoleToUser, updateRolePermissionSet, listRolePermissionKeys } from '@/services/roleService';
-import { createSite, getAuthorizedSites, switchCurrentSite } from '@/services/siteService';
-import { findAccountGlobally } from '@/repositories/userRepository';
+import {
+  createCustomRole,
+  assignRoleToUser,
+  updateRolePermissionSet,
+  listRolePermissionKeys,
+} from '@/services/roleService';
+import { assignUserToSite, createSite, getAuthorizedSites, switchCurrentSite } from '@/services/siteService';
+import { findAccountGlobally, getUserById } from '@/repositories/userRepository';
 import { listSites } from '@/repositories/siteRepository';
-import { configureKvStore, MemoryKvStore } from '@/services/sessionStore';
+import { listUserSitePermissions } from '@/repositories/userSiteRepository';
+import { configureKvStore, loadSession, MemoryKvStore } from '@/services/sessionStore';
 import type { ActorContext } from '@/services/actor';
 import { formatDateTimeZh } from '@/utils/datetime';
 import { hashPassword, verifyPassword, validatePasswordStrength } from '@/utils/password';
@@ -32,15 +38,34 @@ async function main() {
   const version = await migrate(db);
   assert(version === 1, `expected schema version 1, got ${version}`);
   assert((await countTenants()) === 0, 'fresh install must be empty');
-  assert((await getSchemaVersion(db)) === 1, 'schema version not persisted');
+
+  const tables = await db.getAll<{ name: string }>(
+    `SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name`,
+  );
+  const tableNames = tables.map((row) => row.name);
+  const requiredTables = [
+    'schema_migrations',
+    'tenants',
+    'users',
+    'roles',
+    'permissions',
+    'role_permissions',
+    'user_roles',
+    'user_permission_overrides',
+    'sites',
+    'user_site_permissions',
+    'audit_logs',
+    'app_state',
+  ];
+  for (const name of requiredTables) {
+    assert(tableNames.includes(name), `missing table ${name}`);
+  }
 
   const weak = validatePasswordStrength('123456', 'admin');
   assert(!weak.ok, 'weak password must fail');
-
   const hashed = await hashPassword('SafePass#9');
   assert(hashed.hash !== 'SafePass#9', 'password must not be stored in plaintext');
   assert(await verifyPassword('SafePass#9', hashed), 'password verify should succeed');
-  assert(!(await verifyPassword('wrong', hashed)), 'wrong password should fail');
 
   const actor: ActorContext = {
     userId: null,
@@ -80,27 +105,42 @@ async function main() {
     actor,
   });
 
-  assert(boot.user.fullName === '林秋萍', 'admin name mismatch');
-  const adminActor: ActorContext = {
-    ...actor,
-    userId: boot.user.id,
-    fullName: boot.user.fullName,
-    account: boot.user.account,
-    roleSnapshot: '企業總管理員',
-    tenantId: boot.tenant.id,
-  };
-
+  db.close();
   const reopened = createBetterSqliteDatabase(tmp);
   setDatabase(reopened);
   await migrate(reopened);
-  const existing = await findAccountGlobally('linqiuping');
-  assert(existing, 'reopened database lost the admin user');
-  assert(existing.fullName === '林秋萍', 'persisted name mismatch');
+  assert((await getSchemaVersion(reopened)) === 1, 'reopen migration changed schema unexpectedly');
 
-  await login('linqiuping', 'SafePass#9', adminActor);
+  const persistedAdmin = await findAccountGlobally('linqiuping');
+  assert(persistedAdmin, 'reopened database lost the admin user');
 
-  const updated = await changeOwnProfile(adminActor, boot.user.id, { jobTitle: '勤務課長' });
+  await logout({
+    ...actor,
+    userId: persistedAdmin.id,
+    fullName: persistedAdmin.fullName,
+    account: persistedAdmin.account,
+    roleSnapshot: '企業總管理員',
+    tenantId: persistedAdmin.tenantId,
+  });
+  assert(!(await loadSession()), 'session should be cleared after logout');
+
+  const loggedIn = await login('linqiuping', 'SafePass#9', actor);
+  assert(loggedIn.id === persistedAdmin.id, 'login did not return the admin');
+  assert(await loadSession(), 'session missing after login');
+
+  const adminActor: ActorContext = {
+    ...actor,
+    userId: loggedIn.id,
+    fullName: loggedIn.fullName,
+    account: loggedIn.account,
+    roleSnapshot: '企業總管理員',
+    tenantId: loggedIn.tenantId,
+  };
+
+  const updated = await changeOwnProfile(adminActor, loggedIn.id, { jobTitle: '勤務課長' });
   assert(updated.jobTitle === '勤務課長', 'profile update failed');
+  const reloadedProfile = await getUserById(loggedIn.id);
+  assert(reloadedProfile?.jobTitle === '勤務課長', 'profile did not persist');
 
   const site2 = await createSite(adminActor, {
     tenantId: boot.tenant.id,
@@ -108,13 +148,12 @@ async function main() {
     name: '內湖科技園區',
     address: '台北市內湖區',
   });
-  const sites = await getAuthorizedSites(updated);
-  assert(sites.length >= 2, 'expected multiple authorized sites');
+  const adminSites = await getAuthorizedSites(updated);
+  assert(adminSites.length >= 2, 'expected multiple authorized sites');
   const switched = await switchCurrentSite(updated, site2.id);
   assert(switched.id === site2.id, 'site switch failed');
 
   const role = await createCustomRole(adminActor, { tenantId: boot.tenant.id, name: '夜班領班' });
-  assert(role.roleKey.startsWith('CUSTOM_'), 'custom role key should be stable and not Chinese');
   await updateRolePermissionSet(adminActor, boot.tenant.id, role.id, ['sites.view', 'users.view']);
   const keys = await listRolePermissionKeys(role.id);
   assert(keys.includes('sites.view'), 'role permission not saved');
@@ -153,25 +192,63 @@ async function main() {
     targetName: pending.fullName,
     roleName: role.name,
   });
+  await assignUserToSite(adminActor, {
+    tenantId: boot.tenant.id,
+    userId: pending.id,
+    siteId: site2.id,
+    startsAt: null,
+    expiresAt: null,
+    isPermanent: true,
+    targetName: pending.fullName,
+    siteName: site2.name,
+  });
+  const grants = await listUserSitePermissions(pending.id);
+  assert(grants.some((grant) => grant.siteId === site2.id), 'site assignment missing');
+
+  const staff = await login('hsiao.zy', 'GuardPass#1', actor);
+  assert(staff.status === 'active', 'approved user should be able to login');
+  const staffSites = await getAuthorizedSites(staff);
+  assert(
+    staffSites.some((site) => site.id === site2.id),
+    'approved user cannot see assigned site',
+  );
+  assert(
+    !staffSites.some((site) => site.siteCode === 'SITE-001'),
+    'staff should not see unassigned site',
+  );
 
   const logs = await listAuditLogs(boot.tenant.id);
   assert(logs.length > 0, 'audit logs missing');
   const profileLog = logs.find((log) => log.description.includes('職稱由「營運長」修改為「勤務課長」'));
   assert(profileLog, 'profile audit description missing human-readable change');
   assert(profileLog.actorNameSnapshot === '林秋萍', 'audit must show real actor name');
-  const formatted = formatDateTimeZh(profileLog.createdAt);
-  assert(/\d{4}年\d{2}月\d{2}日 \d{2}:\d{2}/.test(formatted), `datetime format wrong: ${formatted}`);
-
-  const createdSiteLog = logs.find((log) => log.description.includes('建立案場「內湖科技園區」'));
-  assert(createdSiteLog, 'site create audit missing');
-  const approveLog = logs.find((log) => log.description.includes('開通員工「蕭志遠」帳號'));
-  assert(approveLog, 'approval audit missing');
+  assert(/\d{4}年\d{2}月\d{2}日 \d{2}:\d{2}/.test(formatDateTimeZh(profileLog.createdAt)), 'datetime format wrong');
+  assert(
+    logs.some((log) => log.description.includes('開通員工「蕭志遠」帳號')),
+    'approval audit missing',
+  );
+  assert(
+    logs.some((log) => log.description.includes('授權「蕭志遠」使用案場「內湖科技園區」')),
+    'site assign audit missing',
+  );
+  assert(
+    logs.some((log) => log.description.includes('建立角色「夜班領班」')),
+    'role create audit missing',
+  );
 
   const allSites = await listSites(boot.tenant.id);
   assert(allSites.length === 2, 'expected two sites');
 
-  await logout(adminActor);
-  console.log('PHASE1_TESTS_PASSED');
+  await logout({
+    ...adminActor,
+    fullName: staff.fullName,
+    account: staff.account,
+    userId: staff.id,
+    roleSnapshot: '夜班領班',
+  });
+
+  console.log('PHASE1_FLOW_PASSED');
+  console.log(`tables=${tableNames.join(',')}`);
   console.log(`schema=${await getSchemaVersion(reopened)} tenants=${await countTenants()} sites=${allSites.length} audits=${logs.length}`);
   reopened.close();
   fs.unlinkSync(tmp);

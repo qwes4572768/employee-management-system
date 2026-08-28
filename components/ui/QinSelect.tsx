@@ -14,7 +14,7 @@ export interface SelectOption<T extends string = string> {
 interface QinSelectProps<T extends string> {
   label: string;
   value: T | '';
-  options: Array<SelectOption<T>>;
+  options: SelectOption<T>[];
   onChange: (value: T) => void;
   placeholder?: string;
 }
@@ -44,15 +44,16 @@ export function QinSelect<T extends string>({
         </Text>
       </Pressable>
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={[styles.overlay, { backgroundColor: colors.overlay }]} onPress={() => setOpen(false)}>
+        <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
           <SafeAreaView style={[styles.sheet, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}>
             <Text style={textStyle(colors, fontScale, 'lg', { fontWeight: '700', marginBottom: spacing.md })}>
               {label}
             </Text>
-            <ScrollView>
+            <ScrollView keyboardShouldPersistTaps="handled">
               {options.map((item) => (
                 <Pressable
-                  key={item.value}
+                  key={item.value || item.label}
                   onPress={() => {
                     onChange(item.value);
                     setOpen(false);
@@ -70,7 +71,7 @@ export function QinSelect<T extends string>({
               ))}
             </ScrollView>
           </SafeAreaView>
-        </Pressable>
+        </View>
       </Modal>
     </View>
   );

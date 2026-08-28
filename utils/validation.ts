@@ -58,3 +58,15 @@ export function validateEmployeeNo(value: string): string | null {
 export function firstError(errors: Array<string | null | undefined>): string | null {
   return errors.find((item): item is string => Boolean(item)) ?? null;
 }
+
+export function parseOptionalNumber(value: string, label: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`${label}請輸入有效數字`);
+  }
+  return parsed;
+}

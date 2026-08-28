@@ -21,12 +21,13 @@ export function SiteSwitcher({ visible, sites, currentId, onClose, onSelect }: S
   const { colors, fontScale } = useTheme();
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable style={[styles.overlay, { backgroundColor: colors.overlay }]} onPress={onClose}>
+      <View style={[styles.overlay, { backgroundColor: colors.overlay }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <SafeAreaView style={[styles.sheet, { backgroundColor: colors.bgElevated, borderColor: colors.border }]}>
           <Text style={textStyle(colors, fontScale, 'lg', { fontWeight: '800', marginBottom: spacing.md })}>
             切換案場
           </Text>
-          <ScrollView>
+          <ScrollView keyboardShouldPersistTaps="handled">
             {sites.length === 0 ? (
               <EmptyState title="尚未授權案場" subtitle="請由主管指派可進入的案場" icon="business-outline" />
             ) : (
@@ -46,7 +47,7 @@ export function SiteSwitcher({ visible, sites, currentId, onClose, onSelect }: S
           </ScrollView>
           <View style={{ height: spacing.md }} />
         </SafeAreaView>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
