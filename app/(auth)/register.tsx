@@ -4,6 +4,7 @@ import { Text } from 'react-native';
 
 import { Screen } from '@/components/layout/Screen';
 import { ErrorBanner, InfoBanner } from '@/components/ui/Banners';
+import { BrandMark } from '@/components/ui/BrandMark';
 import { QinButton } from '@/components/ui/QinButton';
 import { QinDateField } from '@/components/ui/QinDateField';
 import { QinInput } from '@/components/ui/QinInput';
@@ -51,6 +52,7 @@ export default function RegisterScreen() {
 
   return (
     <Screen>
+      <BrandMark size="sm" layout="row" showEnglish={false} style={{ marginBottom: spacing.md }} />
       <Text style={textStyle(colors, fontScale, 'xl', { fontWeight: '800', marginBottom: spacing.sm })}>
         註冊帳號
       </Text>

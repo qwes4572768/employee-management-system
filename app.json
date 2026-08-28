@@ -7,17 +7,28 @@
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "backgroundColor": "#000000",
+    "primaryColor": "#00B8FF",
+    "locales": {
+      "zh": "./locales/zh-Hant.json",
+      "zh-Hant": "./locales/zh-Hant.json",
+      "zh-TW": "./locales/zh-Hant.json"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.qinguan.system",
+      "icon": "./assets/icon.png",
       "infoPlist": {
+        "CFBundleDisplayName": "勤管系統",
+        "CFBundleName": "勤管系統",
         "NSPhotoLibraryUsageDescription": "勤管系統需要存取相簿以設定個人與公司照片。",
         "NSCameraUsageDescription": "勤管系統需要使用相機以拍攝個人與公司照片。"
       }
     },
     "android": {
+      "icon": "./assets/icon.png",
       "adaptiveIcon": {
-        "backgroundColor": "#050A14",
+        "backgroundColor": "#000000",
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -43,9 +54,14 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#050A14",
-          "image": "./assets/splash.png",
-          "imageWidth": 200
+          "backgroundColor": "#000000",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 240,
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#000000",
+            "image": "./assets/splash-icon.png"
+          }
         }
       ],
       [

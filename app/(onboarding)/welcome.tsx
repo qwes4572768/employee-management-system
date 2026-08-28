@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { Alert, Text, View } from 'react-native';
 
 import { Screen } from '@/components/layout/Screen';
+import { BrandMark } from '@/components/ui/BrandMark';
 import { QinButton } from '@/components/ui/QinButton';
 import { QinCard } from '@/components/ui/QinCard';
 import { InfoBanner } from '@/components/ui/Banners';
@@ -15,11 +16,9 @@ export default function WelcomeScreen() {
 
   return (
     <Screen>
-      <Text style={textStyle(colors, fontScale, 'xs', { color: colors.accent, letterSpacing: 3 })}>
-        QINGUAN SYSTEM
-      </Text>
-      <Text style={textStyle(colors, fontScale, 'hero', { fontWeight: '800', marginTop: 8 })}>
-        歡迎使用勤管系統
+      <BrandMark size="lg" style={{ marginBottom: spacing.lg, alignSelf: 'center' }} />
+      <Text style={textStyle(colors, fontScale, 'hero', { fontWeight: '800', marginTop: 8, textAlign: 'center' })}>
+        歡迎使用
       </Text>
       <Text style={textStyle(colors, fontScale, 'md', { color: colors.textMuted, marginTop: 8, marginBottom: spacing.xl })}>
         保全與物業勤務管理。第一階段資料保存在本機，並已預留多租戶與雲端同步架構。

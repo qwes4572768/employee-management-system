@@ -1,6 +1,7 @@
 import { Redirect } from 'expo-router';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
+import { BrandMark } from '@/components/ui/BrandMark';
 import { useSession } from '@/providers/SessionProvider';
 import { useTheme } from '@/theme/ThemeProvider';
 import { textStyle } from '@/theme/typography';
@@ -12,12 +13,7 @@ export default function IndexGate() {
   if (!ready) {
     return (
       <View style={[styles.center, { backgroundColor: colors.bg }]}>
-        <Text style={textStyle(colors, fontScale, 'xs', { color: colors.accent, letterSpacing: 3 })}>
-          QINGUAN SYSTEM
-        </Text>
-        <Text style={textStyle(colors, fontScale, 'xl', { fontWeight: '800', marginTop: 12 })}>
-          勤管系統
-        </Text>
+        <BrandMark size="lg" />
         <ActivityIndicator color={colors.accent} style={{ marginTop: 24 }} />
         <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginTop: 12 })}>
           系統初始化中

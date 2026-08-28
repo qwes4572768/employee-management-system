@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { BrandMark } from '@/components/ui/BrandMark';
 import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
@@ -18,10 +19,8 @@ export function AppHeader({ title, subtitle, onSitePress, siteLabel }: AppHeader
   return (
     <View style={styles.wrap}>
       <View style={styles.titles}>
-        <Text style={textStyle(colors, fontScale, 'xs', { color: colors.accent, letterSpacing: 2 })}>
-          QINGUAN SYSTEM
-        </Text>
-        <Text style={textStyle(colors, fontScale, 'xl', { fontWeight: '800', marginTop: 4 })}>{title}</Text>
+        <BrandMark size="sm" layout="row" showEnglish={false} />
+        <Text style={textStyle(colors, fontScale, 'xl', { fontWeight: '800', marginTop: 8 })}>{title}</Text>
         {subtitle ? (
           <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginTop: 4 })}>
             {subtitle}

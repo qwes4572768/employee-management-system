@@ -4,6 +4,7 @@ import { Text } from 'react-native';
 
 import { Screen } from '@/components/layout/Screen';
 import { ErrorBanner, InfoBanner } from '@/components/ui/Banners';
+import { BrandMark } from '@/components/ui/BrandMark';
 import { QinButton } from '@/components/ui/QinButton';
 import { QinInput } from '@/components/ui/QinInput';
 import { useEnterAppWhenReady } from '@/hooks/useEnterApp';
@@ -27,9 +28,7 @@ export default function LoginScreen() {
 
   return (
     <Screen>
-      <Text style={textStyle(colors, fontScale, 'xs', { color: colors.accent, letterSpacing: 3 })}>
-        QINGUAN
-      </Text>
+      <BrandMark size="md" style={{ marginBottom: spacing.lg, alignSelf: 'center' }} />
       <Text style={textStyle(colors, fontScale, 'hero', { fontWeight: '800', marginTop: 8 })}>登入</Text>
       <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginBottom: spacing.lg, marginTop: 6 })}>
         使用已開通的帳號進入勤管系統。
