@@ -125,8 +125,8 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setReady(true);
       return;
     }
-    const nextUser = await getUserById(loaded.userId);
-    if (!nextUser || nextUser.status !== 'active') {
+    const nextUser = await getUserById(loaded.userId, loaded.tenantId);
+    if (!nextUser || nextUser.status !== 'active' || nextUser.tenantId !== loaded.tenantId) {
       await clearSession();
       setSession(null);
       setUser(nextUser);
@@ -134,11 +134,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       return;
     }
     const nextTenant = await getTenantById(nextUser.tenantId);
-    const nextRoles = await getEffectiveRoles(nextUser.id);
+    const nextRoles = await getEffectiveRoles(nextUser.id, nextUser.tenantId);
     const keys = await getEffectivePermissionKeys(nextUser);
     const sites = await getAuthorizedSites(nextUser);
     const site = await getCurrentSite(nextUser);
-    const snapshot = await roleSnapshotForUser(nextUser.id);
+    const snapshot = await roleSnapshotForUser(nextUser.id, nextUser.tenantId);
     setSession(loaded);
     setUser(nextUser);
     setTenant(nextTenant);

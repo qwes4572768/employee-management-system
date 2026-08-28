@@ -30,15 +30,15 @@ export default function RoleDetailScreen() {
   const locked = role?.roleKey === ROLE_KEYS.SUPER_ADMIN;
 
   const load = useCallback(async () => {
-    if (!id) return;
-    const item = await getRoleById(id);
+    if (!id || !tenant) return;
+    const item = await getRoleById(id, tenant.id);
     setRole(item);
     if (item) {
       setName(item.name);
       setDescription(item.description ?? '');
-      setSelected(await listRolePermissionKeys(item.id));
+      setSelected(await listRolePermissionKeys(item.id, tenant.id));
     }
-  }, [id]);
+  }, [id, tenant]);
 
   useFocusEffect(
     useCallback(() => {

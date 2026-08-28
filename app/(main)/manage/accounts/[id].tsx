@@ -40,12 +40,12 @@ export default function AccountDetailScreen() {
 
   const load = useCallback(async () => {
     if (!id || !tenant) return;
-    const item = await getUserById(id);
+    const item = await getUserById(id, tenant.id);
     setUser(item);
     setRoles(await listRoles(tenant.id));
     setSites((await listSites(tenant.id)).filter((site) => site.status === 'active'));
-    setUserRoles(await listUserRoles(id));
-    setGrants(await listUserSitePermissions(id));
+    setUserRoles(await listUserRoles(id, tenant.id));
+    setGrants(await listUserSitePermissions(id, tenant.id));
   }, [id, tenant]);
 
   useFocusEffect(

@@ -2,10 +2,12 @@ import { buildPermissionCatalog } from '@/constants/permissions';
 import { createId } from '@/utils/id';
 import { nowIso } from '@/utils/datetime';
 
+import type { SqlDatabase } from '../runtime';
+
 export interface Migration {
   version: number;
   name: string;
-  up: string;
+  up: string | ((db: SqlDatabase) => Promise<void>);
 }
 
 const permissionInserts = buildPermissionCatalog()
@@ -216,13 +218,11 @@ CREATE INDEX idx_role_permissions_role ON role_permissions(role_id);
 ${permissionInserts}
 `;
 
-export const migrations: Migration[] = [
-  {
-    version: 1,
-    name: '001_initial',
-    up: MIGRATION_001_SQL,
-  },
-];
+export const migration001: Migration = {
+  version: 1,
+  name: '001_initial',
+  up: MIGRATION_001_SQL,
+};
 
 export function permissionIdForKey(permKey: string): string {
   return `perm-${permKey.replace(/[.]/g, '-')}`;

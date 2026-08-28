@@ -1,8 +1,10 @@
 import { getTenantById, updateTenant } from '@/repositories/tenantRepository';
 import type { Tenant } from '@/types';
+import { formatDateTimeZh, nowIso } from '@/utils/datetime';
 
 import type { ActorContext } from './actor';
 import { writeAudit } from './auditService';
+import { requireActorTenant, assertSameTenant } from './tenantGuard';
 
 export async function editTenant(
   actor: ActorContext,
@@ -17,6 +19,8 @@ export async function editTenant(
     industryType: string | null;
   }>,
 ): Promise<Tenant> {
+  const actorTenant = requireActorTenant(actor);
+  assertSameTenant(actorTenant, tenantId);
   const before = await getTenantById(tenantId);
   if (!before) {
     throw new Error('找不到公司資料');
@@ -26,7 +30,7 @@ export async function editTenant(
     actor,
     action: 'update',
     module: 'tenants',
-    description: `${actor.fullName} 修改公司「${after.officialName}」資料`,
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 修改公司「${after.officialName}」資料`,
     targetType: 'tenant',
     targetId: after.id,
     targetDisplayName: after.officialName,

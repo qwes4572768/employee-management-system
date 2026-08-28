@@ -9,33 +9,47 @@ import {
   updateSite,
   type SiteInsert,
 } from '@/repositories/siteRepository';
-import { grantSiteAccess, listUserSitePermissions, revokeSiteAccess } from '@/repositories/userSiteRepository';
+import {
+  getSiteGrantById,
+  grantSiteAccess,
+  listUserSitePermissions,
+  revokeSiteAccess,
+} from '@/repositories/userSiteRepository';
 import type { Site, SiteStatus, User } from '@/types';
-import { isWithinRange } from '@/utils/datetime';
+import { formatDateTimeZh, isWithinRange, nowIso } from '@/utils/datetime';
 import { required } from '@/utils/validation';
 
 import type { ActorContext } from './actor';
 import { writeAudit } from './auditService';
 import { getEffectiveRoles } from './permissionService';
+import {
+  assertSameTenant,
+  requireActorTenant,
+  requireSiteInTenant,
+  requireUserInTenant,
+} from './tenantGuard';
 
 export async function createSite(actor: ActorContext, input: Omit<SiteInsert, 'createdBy' | 'deviceId'>) {
+  const tenantId = requireActorTenant(actor);
+  assertSameTenant(tenantId, input.tenantId);
   const nameError = required(input.name, '案場名稱');
   const codeError = required(input.siteCode, '案場代碼');
   if (nameError || codeError) {
     throw new Error(nameError ?? codeError ?? '案場資料不完整');
   }
-  const duplicated = await getSiteByCode(input.tenantId, input.siteCode);
+  const duplicated = await getSiteByCode(tenantId, input.siteCode);
   if (duplicated) {
     throw new Error('案場代碼已存在');
   }
   const site = await insertSite({
     ...input,
+    tenantId,
     createdBy: actor.userId,
     deviceId: actor.deviceId,
   });
   if (actor.userId) {
     await grantSiteAccess({
-      tenantId: input.tenantId,
+      tenantId,
       userId: actor.userId,
       siteId: site.id,
       startsAt: null,
@@ -46,10 +60,10 @@ export async function createSite(actor: ActorContext, input: Omit<SiteInsert, 'c
     });
   }
   await writeAudit({
-    actor: { ...actor, tenantId: actor.tenantId ?? input.tenantId },
+    actor: { ...actor, tenantId },
     action: 'create',
     module: 'sites',
-    description: `${actor.fullName} 建立案場「${site.name}」`,
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 建立案場「${site.name}」`,
     targetType: 'site',
     targetId: site.id,
     targetDisplayName: site.name,
@@ -63,10 +77,8 @@ export async function editSite(
   siteId: string,
   patch: Partial<Omit<SiteInsert, 'tenantId' | 'createdBy' | 'deviceId'>>,
 ) {
-  const before = await getSiteById(siteId);
-  if (!before) {
-    throw new Error('找不到案場');
-  }
+  const tenantId = requireActorTenant(actor);
+  const before = await requireSiteInTenant(siteId, tenantId);
   if (patch.siteCode && patch.siteCode.trim() !== before.siteCode) {
     const duplicated = await getSiteByCode(before.tenantId, patch.siteCode);
     if (duplicated) {
@@ -78,7 +90,7 @@ export async function editSite(
     actor,
     action: 'update',
     module: 'sites',
-    description: `${actor.fullName} 修改案場「${after.name}」`,
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 修改案場「${after.name}」`,
     targetType: 'site',
     targetId: after.id,
     targetDisplayName: after.name,
@@ -89,17 +101,15 @@ export async function editSite(
 }
 
 export async function changeSiteStatus(actor: ActorContext, siteId: string, status: SiteStatus) {
-  const before = await getSiteById(siteId);
-  if (!before) {
-    throw new Error('找不到案場');
-  }
+  const tenantId = requireActorTenant(actor);
+  const before = await requireSiteInTenant(siteId, tenantId);
   const after = await setSiteStatus(siteId, status);
   const verb = status === 'inactive' ? '停用' : status === 'archived' ? '封存' : '啟用';
   await writeAudit({
     actor,
     action: 'update',
     module: 'sites',
-    description: `${actor.fullName} ${verb}案場「${after.name}」`,
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} ${verb}案場「${after.name}」`,
     targetType: 'site',
     targetId: after.id,
     targetDisplayName: after.name,
@@ -110,13 +120,13 @@ export async function changeSiteStatus(actor: ActorContext, siteId: string, stat
 }
 
 export async function getAuthorizedSites(user: User): Promise<Site[]> {
-  const roles = await getEffectiveRoles(user.id);
+  const roles = await getEffectiveRoles(user.id, user.tenantId);
   const isSuper = roles.some((role) => role.roleKey === ROLE_KEYS.SUPER_ADMIN);
   const all = await listSites(user.tenantId);
   if (isSuper) {
     return all.filter((site) => site.status !== 'archived');
   }
-  const grants = await listUserSitePermissions(user.id);
+  const grants = await listUserSitePermissions(user.id, user.tenantId);
   const now = new Date();
   const allowed = new Set(
     grants
@@ -164,28 +174,35 @@ export async function assignUserToSite(
     siteName: string;
   },
 ) {
-  const grant = await grantSiteAccess({
-    tenantId: input.tenantId,
-    userId: input.userId,
-    siteId: input.siteId,
+  const tenantId = requireActorTenant(actor);
+  assertSameTenant(tenantId, input.tenantId);
+  const user = await requireUserInTenant(input.userId, tenantId);
+  const site = await requireSiteInTenant(input.siteId, tenantId);
+  const { record, created } = await grantSiteAccess({
+    tenantId,
+    userId: user.id,
+    siteId: site.id,
     startsAt: input.startsAt,
     expiresAt: input.expiresAt,
     isPermanent: input.isPermanent,
     createdBy: actor.userId,
     deviceId: actor.deviceId,
   });
+  const at = formatDateTimeZh(nowIso());
   await writeAudit({
     actor,
-    action: 'assign',
+    action: created ? 'assign' : 'update',
     module: 'sites',
-    description: `${actor.fullName} 授權「${input.targetName}」使用案場「${input.siteName}」`,
+    description: created
+      ? `${actor.fullName} 於 ${at} 授權「${input.targetName}」使用案場「${input.siteName}」`
+      : `${actor.fullName} 於 ${at} 更新「${input.targetName}」的案場「${input.siteName}」授權`,
     targetType: 'user_site_permission',
-    targetId: grant.id,
+    targetId: record.id,
     targetDisplayName: input.targetName,
-    after: grant,
-    siteId: input.siteId,
+    after: record,
+    siteId: site.id,
   });
-  return grant;
+  return record;
 }
 
 export async function removeUserSite(
@@ -194,20 +211,21 @@ export async function removeUserSite(
   targetName: string,
   siteName: string,
 ) {
-  await revokeSiteAccess(grantId);
+  const tenantId = requireActorTenant(actor);
+  const grant = await getSiteGrantById(grantId, tenantId);
+  if (!grant) {
+    throw new Error('找不到案場授權');
+  }
+  await revokeSiteAccess(grant.id, tenantId);
   await writeAudit({
     actor,
     action: 'update',
     module: 'sites',
-    description: `${actor.fullName} 移除「${inputSafe(targetName)}」的案場「${siteName}」授權`,
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 移除「${targetName}」的案場「${siteName}」授權`,
     targetType: 'user_site_permission',
     targetId: grantId,
     targetDisplayName: targetName,
   });
-}
-
-function inputSafe(value: string): string {
-  return value;
 }
 
 export { listSites, getSiteById, listUserSitePermissions };

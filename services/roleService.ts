@@ -2,6 +2,7 @@ import { ROLE_KEYS } from '@/constants/app';
 import { permissionIdForKey } from '@/database/migrations';
 import {
   assignUserRole,
+  getUserRoleById,
   insertPermissionOverride,
   listPermissions,
   listRolePermissionKeys,
@@ -11,22 +12,31 @@ import {
 } from '@/repositories/permissionRepository';
 import { disableRole, getRoleById, insertRole, listRoles, updateRole } from '@/repositories/roleRepository';
 import type { EntityStatus, PermissionEffect, Role } from '@/types';
+import { formatDateTimeZh, nowIso } from '@/utils/datetime';
 import { createId } from '@/utils/id';
 import { required } from '@/utils/validation';
 
 import type { ActorContext } from './actor';
 import { writeAudit } from './auditService';
+import {
+  requireActorTenant,
+  requireRoleInTenant,
+  requireUserInTenant,
+  assertSameTenant,
+} from './tenantGuard';
 
 export async function createCustomRole(
   actor: ActorContext,
   input: { tenantId: string; name: string; description?: string },
 ): Promise<Role> {
+  const tenantId = requireActorTenant(actor);
+  assertSameTenant(tenantId, input.tenantId);
   const nameError = required(input.name, '角色名稱');
   if (nameError) {
     throw new Error(nameError);
   }
   const role = await insertRole({
-    tenantId: input.tenantId,
+    tenantId,
     roleKey: `CUSTOM_${createId().slice(0, 8).toUpperCase()}`,
     name: input.name,
     description: input.description ?? null,
@@ -38,7 +48,7 @@ export async function createCustomRole(
     actor,
     action: 'create',
     module: 'roles',
-    description: `${actor.fullName} 建立角色「${role.name}」`,
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 建立角色「${role.name}」`,
     targetType: 'role',
     targetId: role.id,
     targetDisplayName: role.name,
@@ -48,16 +58,14 @@ export async function createCustomRole(
 }
 
 export async function renameRole(actor: ActorContext, roleId: string, name: string, description?: string | null) {
-  const before = await getRoleById(roleId);
-  if (!before) {
-    throw new Error('找不到角色');
-  }
+  const tenantId = requireActorTenant(actor);
+  const before = await requireRoleInTenant(roleId, tenantId);
   const after = await updateRole(roleId, { name, description });
   await writeAudit({
     actor,
     action: 'update',
     module: 'roles',
-    description: `${actor.fullName} 將角色名稱由「${before.name}」修改為「${after.name}」`,
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 將角色名稱由「${before.name}」修改為「${after.name}」`,
     targetType: 'role',
     targetId: after.id,
     targetDisplayName: after.name,
@@ -68,10 +76,8 @@ export async function renameRole(actor: ActorContext, roleId: string, name: stri
 }
 
 export async function setRoleStatus(actor: ActorContext, roleId: string, status: EntityStatus) {
-  const before = await getRoleById(roleId);
-  if (!before) {
-    throw new Error('找不到角色');
-  }
+  const tenantId = requireActorTenant(actor);
+  const before = await requireRoleInTenant(roleId, tenantId);
   if (before.isSystem && status !== 'active') {
     throw new Error('系統角色不可停用');
   }
@@ -80,7 +86,7 @@ export async function setRoleStatus(actor: ActorContext, roleId: string, status:
     actor,
     action: 'update',
     module: 'roles',
-    description: `${actor.fullName} ${status === 'inactive' ? '停用' : '啟用'}角色「${after.name}」`,
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} ${status === 'inactive' ? '停用' : '啟用'}角色「${after.name}」`,
     targetType: 'role',
     targetId: after.id,
     targetDisplayName: after.name,
@@ -96,21 +102,20 @@ export async function updateRolePermissionSet(
   roleId: string,
   permKeys: string[],
 ) {
-  const role = await getRoleById(roleId);
-  if (!role) {
-    throw new Error('找不到角色');
-  }
+  const actorTenant = requireActorTenant(actor);
+  assertSameTenant(actorTenant, tenantId);
+  const role = await requireRoleInTenant(roleId, actorTenant);
   if (role.roleKey === ROLE_KEYS.SUPER_ADMIN) {
     throw new Error('企業總管理員權限不可縮減');
   }
-  const before = await listRolePermissionKeys(roleId);
-  await setRolePermissions(tenantId, roleId, permKeys);
-  const after = await listRolePermissionKeys(roleId);
+  const before = await listRolePermissionKeys(roleId, actorTenant);
+  await setRolePermissions(actorTenant, roleId, permKeys);
+  const after = await listRolePermissionKeys(roleId, actorTenant);
   await writeAudit({
     actor,
     action: 'update',
     module: 'permissions',
-    description: `${actor.fullName} 修改角色「${role.name}」權限`,
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 修改角色「${role.name}」權限`,
     targetType: 'role',
     targetId: role.id,
     targetDisplayName: role.name,
@@ -132,36 +137,48 @@ export async function assignRoleToUser(
     roleName: string;
   },
 ) {
-  const assignment = await assignUserRole({
-    tenantId: input.tenantId,
-    userId: input.userId,
-    roleId: input.roleId,
+  const tenantId = requireActorTenant(actor);
+  assertSameTenant(tenantId, input.tenantId);
+  const user = await requireUserInTenant(input.userId, tenantId);
+  const role = await requireRoleInTenant(input.roleId, tenantId);
+  const { record, created } = await assignUserRole({
+    tenantId,
+    userId: user.id,
+    roleId: role.id,
     startsAt: input.startsAt,
     expiresAt: input.expiresAt,
     isPermanent: input.isPermanent,
     createdBy: actor.userId,
     deviceId: actor.deviceId,
   });
+  const at = formatDateTimeZh(nowIso());
   await writeAudit({
     actor,
-    action: 'update',
+    action: created ? 'assign' : 'update',
     module: 'users',
-    description: `${actor.fullName} 指派「${input.targetName}」角色為「${input.roleName}」`,
+    description: created
+      ? `${actor.fullName} 於 ${at} 指派「${input.targetName}」角色為「${input.roleName}」`
+      : `${actor.fullName} 於 ${at} 更新「${input.targetName}」的角色「${input.roleName}」授權`,
     targetType: 'user_role',
-    targetId: assignment.id,
+    targetId: record.id,
     targetDisplayName: input.targetName,
-    after: assignment,
+    after: record,
   });
-  return assignment;
+  return record;
 }
 
 export async function removeUserRoleAssignment(actor: ActorContext, assignmentId: string, targetName: string) {
-  await revokeUserRole(assignmentId);
+  const tenantId = requireActorTenant(actor);
+  const assignment = await getUserRoleById(assignmentId, tenantId);
+  if (!assignment) {
+    throw new Error('找不到角色授權');
+  }
+  await revokeUserRole(assignment.id, tenantId);
   await writeAudit({
     actor,
     action: 'update',
     module: 'users',
-    description: `${actor.fullName} 移除「${targetName}」的角色授權`,
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 移除「${targetName}」的角色授權`,
     targetType: 'user_role',
     targetId: assignmentId,
     targetDisplayName: targetName,
@@ -181,9 +198,12 @@ export async function addUserPermissionOverride(
     targetName: string;
   },
 ) {
-  const override = await insertPermissionOverride({
-    tenantId: input.tenantId,
-    userId: input.userId,
+  const tenantId = requireActorTenant(actor);
+  assertSameTenant(tenantId, input.tenantId);
+  const user = await requireUserInTenant(input.userId, tenantId);
+  const { record, created } = await insertPermissionOverride({
+    tenantId,
+    userId: user.id,
     permissionId: permissionIdForKey(input.permKey),
     effect: input.effect,
     startsAt: input.startsAt,
@@ -192,17 +212,21 @@ export async function addUserPermissionOverride(
     createdBy: actor.userId,
     deviceId: actor.deviceId,
   });
+  const at = formatDateTimeZh(nowIso());
+  const effectLabel = input.effect === 'allow' ? '允許' : '拒絕';
   await writeAudit({
     actor,
-    action: 'update',
+    action: created ? 'assign' : 'update',
     module: 'permissions',
-    description: `${actor.fullName} 為「${input.targetName}」設定個別權限 ${input.permKey}`,
+    description: created
+      ? `${actor.fullName} 於 ${at} 為「${input.targetName}」設定個別權限 ${input.permKey}（${effectLabel}）`
+      : `${actor.fullName} 於 ${at} 更新「${input.targetName}」的個別權限 ${input.permKey} 為「${effectLabel}」`,
     targetType: 'user_permission_override',
-    targetId: override.id,
+    targetId: record.id,
     targetDisplayName: input.targetName,
-    after: override,
+    after: record,
   });
-  return override;
+  return record;
 }
 
 export { listRoles, getRoleById, listRolePermissionKeys, listPermissions, listUserOverrides };

@@ -2,6 +2,7 @@ import { insertAuditLog, listAuditLogs } from '@/repositories/auditRepository';
 import { jsonText } from '@/utils/data';
 
 import type { ActorContext } from './actor';
+import { requireActorTenant } from './tenantGuard';
 
 export async function writeAudit(input: {
   actor: ActorContext;
@@ -37,6 +38,12 @@ export async function writeAudit(input: {
   });
 }
 
-export async function getAuditLogs(tenantId: string) {
+export async function getAuditLogs(tenantId: string, actor?: ActorContext) {
+  if (actor) {
+    const actorTenant = requireActorTenant(actor);
+    if (actorTenant !== tenantId) {
+      throw new Error('無權存取其他公司的資料');
+    }
+  }
   return listAuditLogs(tenantId);
 }

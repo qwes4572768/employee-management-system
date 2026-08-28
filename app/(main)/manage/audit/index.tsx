@@ -14,14 +14,14 @@ import type { AuditLog } from '@/types';
 import { formatDateTimeZh } from '@/utils/datetime';
 
 export default function AuditScreen() {
-  const { tenant } = useSession();
+  const { actor, tenant } = useSession();
   const { colors, fontScale } = useTheme();
   const [logs, setLogs] = useState<AuditLog[]>([]);
 
   const load = useCallback(async () => {
     if (!tenant) return;
-    setLogs(await getAuditLogs(tenant.id));
-  }, [tenant]);
+    setLogs(await getAuditLogs(tenant.id, actor));
+  }, [tenant, actor]);
 
   useFocusEffect(
     useCallback(() => {

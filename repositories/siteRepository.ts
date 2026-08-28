@@ -92,11 +92,16 @@ export async function insertSite(input: SiteInsert): Promise<Site> {
   return created;
 }
 
-export async function getSiteById(id: string): Promise<Site | null> {
-  const row = await getDatabase().getFirst<SiteRow>(
-    'SELECT * FROM sites WHERE id = ? AND deleted_at IS NULL',
-    [id],
-  );
+export async function getSiteById(id: string, tenantId?: string | null): Promise<Site | null> {
+  const row = tenantId
+    ? await getDatabase().getFirst<SiteRow>(
+        'SELECT * FROM sites WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL',
+        [id, tenantId],
+      )
+    : await getDatabase().getFirst<SiteRow>(
+        'SELECT * FROM sites WHERE id = ? AND deleted_at IS NULL',
+        [id],
+      );
   return row ? mapSite(row) : null;
 }
 

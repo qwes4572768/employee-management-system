@@ -43,7 +43,7 @@ export default function ApprovalDetailScreen() {
   useEffect(() => {
     if (!id || !tenant) return;
     void (async () => {
-      const item = await getUserById(id);
+      const item = await getUserById(id, tenant.id);
       setUser(item);
       const rs = await listRoles(tenant.id);
       const activeRoles = rs.filter((role) => role.status === 'active');

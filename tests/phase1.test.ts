@@ -1,5 +1,6 @@
+import { CURRENT_SCHEMA_VERSION } from '@/database/migrations';
 import { createBetterSqliteDatabase } from '@/database/betterSqliteAdapter';
-import { migrate, getSchemaVersion } from '@/database/migrate';
+import { migrate, getSchemaVersion, isForeignKeysEnabled } from '@/database/migrate';
 import { setDatabase } from '@/database/runtime';
 import { countTenants } from '@/repositories/tenantRepository';
 import { listAuditLogs } from '@/repositories/auditRepository';
@@ -36,7 +37,8 @@ async function main() {
   setDatabase(db);
 
   const version = await migrate(db);
-  assert(version === 1, `expected schema version 1, got ${version}`);
+  assert(version === CURRENT_SCHEMA_VERSION, `expected schema version ${CURRENT_SCHEMA_VERSION}, got ${version}`);
+  assert(await isForeignKeysEnabled(db), 'PRAGMA foreign_keys must be ON');
   assert((await countTenants()) === 0, 'fresh install must be empty');
 
   const tables = await db.getAll<{ name: string }>(
@@ -109,7 +111,8 @@ async function main() {
   const reopened = createBetterSqliteDatabase(tmp);
   setDatabase(reopened);
   await migrate(reopened);
-  assert((await getSchemaVersion(reopened)) === 1, 'reopen migration changed schema unexpectedly');
+  assert((await getSchemaVersion(reopened)) === CURRENT_SCHEMA_VERSION, 'reopen migration changed schema unexpectedly');
+  assert(await isForeignKeysEnabled(reopened), 'foreign keys disabled after reopen');
 
   const persistedAdmin = await findAccountGlobally('linqiuping');
   assert(persistedAdmin, 'reopened database lost the admin user');

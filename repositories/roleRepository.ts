@@ -65,11 +65,16 @@ export async function insertRole(input: {
   return created;
 }
 
-export async function getRoleById(id: string): Promise<Role | null> {
-  const row = await getDatabase().getFirst<RoleRow>(
-    'SELECT * FROM roles WHERE id = ? AND deleted_at IS NULL',
-    [id],
-  );
+export async function getRoleById(id: string, tenantId?: string | null): Promise<Role | null> {
+  const row = tenantId
+    ? await getDatabase().getFirst<RoleRow>(
+        'SELECT * FROM roles WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL',
+        [id, tenantId],
+      )
+    : await getDatabase().getFirst<RoleRow>(
+        'SELECT * FROM roles WHERE id = ? AND deleted_at IS NULL',
+        [id],
+      );
   return row ? mapRole(row) : null;
 }
 

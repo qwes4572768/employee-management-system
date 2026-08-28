@@ -5,6 +5,7 @@ import { nowIso } from '@/utils/datetime';
 import { createId } from '@/utils/id';
 
 import { mapSync, type SyncRow } from './mappers';
+import type { GrantWriteResult } from './permissionRepository';
 
 interface Row extends SyncRow {
   id: string;
@@ -31,6 +32,19 @@ function mapRow(row: Row): UserSitePermission {
   };
 }
 
+export async function getSiteGrantById(id: string, tenantId?: string | null): Promise<UserSitePermission | null> {
+  const row = tenantId
+    ? await getDatabase().getFirst<Row>(
+        'SELECT * FROM user_site_permissions WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL',
+        [id, tenantId],
+      )
+    : await getDatabase().getFirst<Row>(
+        'SELECT * FROM user_site_permissions WHERE id = ? AND deleted_at IS NULL',
+        [id],
+      );
+  return row ? mapRow(row) : null;
+}
+
 export async function grantSiteAccess(input: {
   tenantId: string;
   userId: string;
@@ -40,19 +54,20 @@ export async function grantSiteAccess(input: {
   isPermanent: boolean;
   createdBy: string | null;
   deviceId: string | null;
-}): Promise<UserSitePermission> {
+}): Promise<GrantWriteResult<UserSitePermission>> {
   const existing = await getDatabase().getFirst<Row>(
     `SELECT * FROM user_site_permissions
-     WHERE user_id = ? AND site_id = ? AND deleted_at IS NULL`,
-    [input.userId, input.siteId],
+     WHERE tenant_id = ? AND user_id = ? AND site_id = ? AND deleted_at IS NULL`,
+    [input.tenantId, input.userId, input.siteId],
   );
+  const ts = nowIso();
   if (existing) {
     await getDatabase().run(
       `UPDATE user_site_permissions SET
         starts_at = ?, expires_at = ?, is_permanent = ?, status = 'active',
         updated_at = ?, version = version + 1, sync_status = 'pending', deleted_at = NULL
-       WHERE id = ?`,
-      [input.startsAt, input.expiresAt, input.isPermanent ? 1 : 0, nowIso(), existing.id],
+       WHERE id = ? AND tenant_id = ?`,
+      [input.startsAt, input.expiresAt, input.isPermanent ? 1 : 0, ts, existing.id, input.tenantId],
     );
     const updated = await getDatabase().getFirst<Row>(
       'SELECT * FROM user_site_permissions WHERE id = ?',
@@ -61,11 +76,10 @@ export async function grantSiteAccess(input: {
     if (!updated) {
       throw new Error('更新案場授權失敗');
     }
-    return mapRow(updated);
+    return { record: mapRow(updated), created: false };
   }
 
   const id = createId();
-  const ts = nowIso();
   await getDatabase().run(
     `INSERT INTO user_site_permissions (
       id, tenant_id, user_id, site_id, starts_at, expires_at, is_permanent, status,
@@ -91,30 +105,71 @@ export async function grantSiteAccess(input: {
   if (!created) {
     throw new Error('建立案場授權失敗');
   }
-  return mapRow(created);
+  return { record: mapRow(created), created: true };
 }
 
-export async function revokeSiteAccess(id: string): Promise<void> {
+export async function revokeSiteAccess(id: string, tenantId?: string | null): Promise<void> {
+  const ts = nowIso();
+  if (tenantId) {
+    await getDatabase().run(
+      `UPDATE user_site_permissions SET
+        status = 'inactive', deleted_at = ?, updated_at = ?, version = version + 1, sync_status = 'pending'
+       WHERE id = ? AND tenant_id = ?`,
+      [ts, ts, id, tenantId],
+    );
+    return;
+  }
   await getDatabase().run(
     `UPDATE user_site_permissions SET
       status = 'inactive', deleted_at = ?, updated_at = ?, version = version + 1, sync_status = 'pending'
      WHERE id = ?`,
-    [nowIso(), nowIso(), id],
+    [ts, ts, id],
   );
 }
 
-export async function listUserSitePermissions(userId: string): Promise<UserSitePermission[]> {
-  const rows = await getDatabase().getAll<Row>(
-    `SELECT * FROM user_site_permissions WHERE user_id = ? AND deleted_at IS NULL AND status = 'active'`,
-    [userId],
-  );
+export async function listUserSitePermissions(
+  userId: string,
+  tenantId?: string | null,
+): Promise<UserSitePermission[]> {
+  const rows = tenantId
+    ? await getDatabase().getAll<Row>(
+        `SELECT * FROM user_site_permissions
+         WHERE tenant_id = ? AND user_id = ? AND deleted_at IS NULL AND status = 'active'`,
+        [tenantId, userId],
+      )
+    : await getDatabase().getAll<Row>(
+        `SELECT * FROM user_site_permissions WHERE user_id = ? AND deleted_at IS NULL AND status = 'active'`,
+        [userId],
+      );
   return rows.map(mapRow);
 }
 
-export async function listSiteUserPermissions(siteId: string): Promise<UserSitePermission[]> {
-  const rows = await getDatabase().getAll<Row>(
-    `SELECT * FROM user_site_permissions WHERE site_id = ? AND deleted_at IS NULL AND status = 'active'`,
-    [siteId],
-  );
+export async function listSiteUserPermissions(
+  siteId: string,
+  tenantId?: string | null,
+): Promise<UserSitePermission[]> {
+  const rows = tenantId
+    ? await getDatabase().getAll<Row>(
+        `SELECT * FROM user_site_permissions
+         WHERE tenant_id = ? AND site_id = ? AND deleted_at IS NULL AND status = 'active'`,
+        [tenantId, siteId],
+      )
+    : await getDatabase().getAll<Row>(
+        `SELECT * FROM user_site_permissions WHERE site_id = ? AND deleted_at IS NULL AND status = 'active'`,
+        [siteId],
+      );
   return rows.map(mapRow);
+}
+
+export async function countActiveSiteGrants(
+  userId: string,
+  siteId: string,
+  tenantId: string,
+): Promise<number> {
+  const row = await getDatabase().getFirst<{ c: number }>(
+    `SELECT COUNT(*) as c FROM user_site_permissions
+     WHERE tenant_id = ? AND user_id = ? AND site_id = ? AND deleted_at IS NULL AND status = 'active'`,
+    [tenantId, userId, siteId],
+  );
+  return row?.c ?? 0;
 }

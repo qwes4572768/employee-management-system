@@ -101,11 +101,16 @@ export async function insertUser(input: UserInsert): Promise<User> {
   return created;
 }
 
-export async function getUserById(id: string): Promise<User | null> {
-  const row = await getDatabase().getFirst<UserRow>(
-    'SELECT * FROM users WHERE id = ? AND deleted_at IS NULL',
-    [id],
-  );
+export async function getUserById(id: string, tenantId?: string | null): Promise<User | null> {
+  const row = tenantId
+    ? await getDatabase().getFirst<UserRow>(
+        'SELECT * FROM users WHERE id = ? AND tenant_id = ? AND deleted_at IS NULL',
+        [id, tenantId],
+      )
+    : await getDatabase().getFirst<UserRow>(
+        'SELECT * FROM users WHERE id = ? AND deleted_at IS NULL',
+        [id],
+      );
   return row ? mapUser(row) : null;
 }
 

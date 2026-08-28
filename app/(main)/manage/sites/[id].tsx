@@ -20,7 +20,7 @@ import { parseOptionalNumber } from '@/utils/validation';
 export default function SiteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { actor, can, refresh } = useSession();
+  const { actor, can, refresh, tenant } = useSession();
   const { colors, fontScale } = useTheme();
   const [site, setSite] = useState<Site | null>(null);
   const [form, setForm] = useState({
@@ -37,10 +37,10 @@ export default function SiteDetailScreen() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!id) {
+    if (!id || !tenant) {
       return;
     }
-    void getSiteById(id).then((item) => {
+    void getSiteById(id, tenant.id).then((item) => {
       setSite(item);
       if (item) {
         setForm({
@@ -55,7 +55,7 @@ export default function SiteDetailScreen() {
         });
       }
     });
-  }, [id]);
+  }, [id, tenant]);
 
   if (!site) {
     return (
@@ -67,7 +67,7 @@ export default function SiteDetailScreen() {
 
   const reload = async () => {
     if (!id) return;
-    const item = await getSiteById(id);
+    const item = await getSiteById(id, tenant?.id);
     setSite(item);
     await refresh();
   };

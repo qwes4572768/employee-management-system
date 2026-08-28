@@ -11,6 +11,7 @@ import {
 } from '@/repositories/userRepository';
 import type { Gender, Tenant, User, UserStatus } from '@/types';
 import { hashPassword, validatePasswordStrength, verifyPassword } from '@/utils/password';
+import { formatDateTimeZh, nowIso } from '@/utils/datetime';
 import {
   firstError,
   required,
@@ -23,6 +24,7 @@ import type { ActorContext } from './actor';
 import { writeAudit } from './auditService';
 import { roleSnapshotForUser } from './permissionService';
 import { clearSession, createSession, saveSession } from './sessionStore';
+import { requireActorTenant, requireUserInTenant } from './tenantGuard';
 
 export async function isBootstrapComplete(): Promise<boolean> {
   return (await countTenants()) > 0;
@@ -84,7 +86,7 @@ export async function login(account: string, password: string, actor: ActorConte
   }
 
   await saveSession(createSession(user.id, user.tenantId));
-  const snapshot = await roleSnapshotForUser(user.id);
+  const snapshot = await roleSnapshotForUser(user.id, user.tenantId);
   await writeAudit({
     actor: {
       ...actor,
@@ -200,10 +202,11 @@ export async function changeOwnProfile(
     photoUri?: string | null;
   },
 ): Promise<User> {
-  const before = await getUserById(userId);
-  if (!before) {
-    throw new Error('找不到使用者');
+  const tenantId = requireActorTenant(actor);
+  if (actor.userId !== userId) {
+    throw new Error('只能修改本人資料');
   }
+  const before = await requireUserInTenant(userId, tenantId);
   const after = await updateUserProfile(userId, patch);
   const changes: string[] = [];
   if (patch.fullName && patch.fullName !== before.fullName) {
@@ -252,10 +255,11 @@ export async function changeOwnPassword(
   nextPassword: string,
   confirmPassword: string,
 ): Promise<void> {
-  const user = await getUserById(userId);
-  if (!user) {
-    throw new Error('找不到使用者');
+  const tenantId = requireActorTenant(actor);
+  if (actor.userId !== userId) {
+    throw new Error('只能修改本人密碼');
   }
+  const user = await requireUserInTenant(userId, tenantId);
   const secret = await getUserSecret(userId);
   if (!secret) {
     throw new Error('找不到密碼資料');
@@ -294,17 +298,15 @@ export async function reviewAccount(
   decision: Extract<UserStatus, 'active' | 'returned' | 'rejected'>,
   reviewNote: string | null,
 ): Promise<User> {
-  const before = await getUserById(userId);
-  if (!before) {
-    throw new Error('找不到申請帳號');
-  }
+  const tenantId = requireActorTenant(actor);
+  const before = await requireUserInTenant(userId, tenantId);
   const after = await updateUserStatus(userId, decision, reviewNote);
   const verb = decision === 'active' ? '開通' : decision === 'returned' ? '退回' : '拒絕';
   await writeAudit({
     actor,
     action: decision === 'active' ? 'approve' : 'update',
     module: 'accounts',
-    description: `${actor.fullName} ${verb}員工「${after.fullName}」帳號`,
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} ${verb}員工「${after.fullName}」帳號`,
     targetType: 'user',
     targetId: after.id,
     targetDisplayName: after.fullName,
