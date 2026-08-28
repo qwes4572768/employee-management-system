@@ -176,13 +176,21 @@ async function applyThrough003(db: ReturnType<typeof createBetterSqliteDatabase>
     new Date().toISOString(),
   ]);
   await db.exec('PRAGMA foreign_keys = OFF;');
-  await migration002.up(db);
+  if (typeof migration002.up === 'function') {
+    await migration002.up(db);
+  } else {
+    await db.exec(migration002.up);
+  }
   await db.run('INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)', [
     2,
     '002_integrity_constraints',
     new Date().toISOString(),
   ]);
-  await migration003.up(db);
+  if (typeof migration003.up === 'function') {
+    await migration003.up(db);
+  } else {
+    await db.exec(migration003.up);
+  }
   await db.run('INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, ?, ?)', [
     3,
     '003_workforce_attendance',
