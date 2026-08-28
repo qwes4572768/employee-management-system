@@ -11,7 +11,7 @@ import { QinCard } from '@/components/ui/QinCard';
 import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { GENDER_LABELS } from '@/constants/app';
 import { useSession } from '@/providers/SessionProvider';
-import { DUTY_STATUS_LABELS, getDashboardSnapshot, type OnDutyCard } from '@/services/dashboardService';
+import { DUTY_STATUS_LABELS, getDashboardSnapshot, type DashboardStaffingStats, type OnDutyCard } from '@/services/dashboardService';
 import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
@@ -24,6 +24,7 @@ export default function DashboardScreen() {
   const [primary, setPrimary] = useState<OnDutyCard | null>(null);
   const [others, setOthers] = useState<OnDutyCard[]>([]);
   const [stats, setStats] = useState<{ expected: number; arrived: number; onDuty: number; late: number; missing: number } | null>(null);
+  const [staffing, setStaffing] = useState<DashboardStaffingStats | null>(null);
   const [selected, setSelected] = useState<OnDutyCard | null>(null);
 
   const load = useCallback(async () => {
@@ -31,6 +32,7 @@ export default function DashboardScreen() {
     setPrimary(snap.primary);
     setOthers(snap.others);
     setStats(snap.managerStats);
+    setStaffing(snap.staffingStats);
     setSelected(snap.primary);
   }, [actor, currentSite?.id]);
 
@@ -117,6 +119,21 @@ export default function DashboardScreen() {
             <StatCard label="勤務中" value={String(stats.onDuty)} hint="進行中的勤務階段" />
             <StatCard label="遲到" value={String(stats.late)} hint="超過寬限分鐘" />
             <StatCard label="缺卡" value={String(stats.missing)} hint="應到但尚未打卡" />
+            {staffing ? (
+              <StatCard
+                label="缺員"
+                value={staffing.allUnknown ? '—' : String(staffing.shortage)}
+                hint={
+                  staffing.allUnknown
+                    ? '尚未設定最低勤務人數'
+                    : staffing.shortage > 0
+                      ? staffing.unknown
+                        ? '低於最低勤務人數（部分班別尚未設定）'
+                        : '低於最低勤務人數'
+                      : '已達標'
+                }
+              />
+            ) : null}
           </>
         ) : (
           <StatCard

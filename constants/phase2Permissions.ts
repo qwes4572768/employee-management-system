@@ -28,3 +28,8 @@ export const PHASE2A_PERMISSION_KEYS = [
   'leave.policy.manage',
   'leave.interview.record',
 ] as const;
+
+export const PHASE2A1_PERMISSION_KEYS = [
+  'staffingRequirement.view',
+  'staffingRequirement.manage',
+] as const;

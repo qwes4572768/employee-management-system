@@ -9,16 +9,18 @@ import { QinCard } from '@/components/ui/QinCard';
 import { QinInput } from '@/components/ui/QinInput';
 import { QinSelect } from '@/components/ui/QinSelect';
 import { SwitchRow } from '@/components/ui/SwitchRow';
+import { CoverageLines } from '@/components/staffing/CoverageLines';
 import { STAFFING_MODE_LABELS } from '@/constants/staffing';
 import { SCHEDULE_TYPE_LABELS, type ScheduleType } from '@/constants/workforce';
 import { useSession } from '@/providers/SessionProvider';
 import { listUsersByTenant } from '@/repositories/userRepository';
 import { listSites } from '@/repositories/siteRepository';
 import { createSchedule, getShiftTemplates, previewSchedule, ScheduleDecisionError } from '@/services/scheduleService';
+import { getShiftCoverageForActor } from '@/services/staffingRequirementService';
 import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
-import type { Site, User, WorkforceWarning } from '@/types';
+import type { ShiftCoverage, Site, User, WorkforceWarning } from '@/types';
 
 export default function NewScheduleScreen() {
   const router = useRouter();
@@ -38,6 +40,7 @@ export default function NewScheduleScreen() {
   const [trainerId, setTrainerId] = useState('');
   const [restReason, setRestReason] = useState('');
   const [warnings, setWarnings] = useState<WorkforceWarning[]>([]);
+  const [coverage, setCoverage] = useState<ShiftCoverage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -47,6 +50,20 @@ export default function NewScheduleScreen() {
     void listSites(tenant.id).then(setSites);
     void getShiftTemplates(actor, siteId || null).then((items) => setTemplates(items.map((t) => ({ id: t.id, name: t.name }))));
   }, [actor, tenant, siteId]);
+
+  useEffect(() => {
+    if (!siteId || !workDate) {
+      setCoverage(null);
+      return;
+    }
+    void getShiftCoverageForActor(actor, {
+      siteId,
+      workDate,
+      shiftTemplateId: templateId || null,
+    })
+      .then(setCoverage)
+      .catch(() => setCoverage(null));
+  }, [actor, siteId, workDate, templateId]);
 
   const selected = users.find((u) => u.id === userId);
 
@@ -62,6 +79,14 @@ export default function NewScheduleScreen() {
         options={templates.map((t) => ({ value: t.id, label: t.name }))}
         onChange={setTemplateId}
       />
+      {coverage ? (
+        <QinCard style={{ marginBottom: spacing.md }}>
+          <Text style={textStyle(colors, fontScale, 'sm', { fontWeight: '800' })}>
+            {coverage.siteName} · {coverage.shiftName} · {coverage.workDate}
+          </Text>
+          <CoverageLines coverage={coverage} />
+        </QinCard>
+      ) : null}
       <QinSelect
         label="排班類型"
         value={scheduleType}

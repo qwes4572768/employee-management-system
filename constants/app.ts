@@ -63,6 +63,7 @@ export const MODULE_LABELS: Record<string, string> = {
   attendance: '出勤',
   workSession: '勤務',
   leave: '假勤',
+  staffingRequirement: '人力需求',
 };
 
 export const ACTION_LABELS: Record<string, string> = {

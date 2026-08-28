@@ -231,6 +231,20 @@ export const EXTRA_PERMISSIONS = [
     name: '紀錄事假面談',
     description: '填寫事假面談紀錄',
   },
+  {
+    permKey: 'staffingRequirement.view',
+    module: 'staffingRequirement',
+    action: 'view',
+    name: '查看人力需求',
+    description: '檢視案場班別最低勤務人數',
+  },
+  {
+    permKey: 'staffingRequirement.manage',
+    module: 'staffingRequirement',
+    action: 'manage',
+    name: '管理人力需求',
+    description: '建立、修改或停用案場班別最低勤務人數',
+  },
 ] as const;
 
 export function permissionKey(module: string, action: string): string {
@@ -331,6 +345,8 @@ export const MANAGER_DEFAULT_PERMISSIONS = [
   'leave.policy.view',
   'leave.policy.manage',
   'leave.interview.record',
+  'staffingRequirement.view',
+  'staffingRequirement.manage',
 ] as const;
 
 export const STAFF_DEFAULT_PERMISSIONS = [

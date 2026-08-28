@@ -7,7 +7,9 @@ import { ErrorBanner } from '@/components/ui/Banners';
 import { QinButton } from '@/components/ui/QinButton';
 import { QinCard } from '@/components/ui/QinCard';
 import { QinInput } from '@/components/ui/QinInput';
+import { CoverageLines } from '@/components/staffing/CoverageLines';
 import { LEAVE_TYPE_LABELS } from '@/constants/leave';
+import { UNSET_MINIMUM_HEADCOUNT_LABEL } from '@/constants/staffing';
 import { useSession } from '@/providers/SessionProvider';
 import { getUserById } from '@/repositories/userRepository';
 import {
@@ -20,7 +22,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
 import { formatDateTimeZh } from '@/utils/datetime';
-import type { LeaveRequest, LeaveRequestAttachment, LeaveReviewHistory, WorkSchedule } from '@/types';
+import type { LeaveRequest, LeaveRequestAttachment, LeaveReviewHistory, ShiftCoverage, WorkSchedule } from '@/types';
 
 export default function LeaveReviewDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -32,7 +34,7 @@ export default function LeaveReviewDetailScreen() {
   const [history, setHistory] = useState<LeaveReviewHistory[]>([]);
   const [attachments, setAttachments] = useState<LeaveRequestAttachment[]>([]);
   const [schedules, setSchedules] = useState<WorkSchedule[]>([]);
-  const [shortage, setShortage] = useState(0);
+  const [impacts, setImpacts] = useState<ShiftCoverage[]>([]);
   const [note, setNote] = useState('');
   const [interview, setInterview] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +46,7 @@ export default function LeaveReviewDetailScreen() {
     setHistory(detail.history);
     setAttachments(detail.attachments);
     setSchedules(detail.schedules);
-    setShortage(detail.impact.impacts.reduce((sum, item) => sum + item.shortage, 0));
+    setImpacts(detail.impact.impacts);
     const user = await getUserById(detail.request.userId, actor.tenantId ?? undefined);
     setName(user?.fullName ?? detail.request.userId);
   }, [actor, id]);
@@ -70,11 +72,14 @@ export default function LeaveReviewDetailScreen() {
       <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginBottom: spacing.md })}>
         {LEAVE_TYPE_LABELS[request.leaveType]} · {request.startDate}～{request.endDate} · {request.days}日
       </Text>
-      {shortage > 0 ? (
-        <Text style={textStyle(colors, fontScale, 'sm', { color: colors.danger, marginBottom: spacing.md })}>
-          🔴 核准後本班將缺員 {shortage} 人
-        </Text>
-      ) : null}
+      {impacts.map((impact) => (
+        <QinCard key={`${impact.siteId}-${impact.workDate}-${impact.shiftTemplateId ?? 'none'}`} style={{ marginBottom: spacing.md }}>
+          <Text style={textStyle(colors, fontScale, 'sm', { fontWeight: '800' })}>
+            {impact.siteName} · {impact.shiftName} · {impact.workDate}
+          </Text>
+          <CoverageLines coverage={impact} unsetLabel={UNSET_MINIMUM_HEADCOUNT_LABEL} />
+        </QinCard>
+      ))}
       {schedules.length > 0 ? (
         <Text style={textStyle(colors, fontScale, 'sm', { marginBottom: spacing.md })}>
           本次請假影響 {schedules.length} 個勤務班次

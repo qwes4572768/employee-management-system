@@ -211,6 +211,7 @@ async function main() {
     'preferred_days_off',
     'schedule_leave_links',
     'app_notifications',
+    'site_shift_requirements',
   ]) {
     assert(names.includes(name), `missing table ${name}`);
   }
@@ -731,7 +732,7 @@ async function main() {
   const before = await seed('升級二', 'up2.admin');
   const beforeLogs = await listAuditLogs(before.tenant.id);
   const afterV = await migrate(up);
-  assert(afterV === CURRENT_SCHEMA_VERSION, 'upgrade to 3');
+  assert(afterV === CURRENT_SCHEMA_VERSION, 'upgrade to current schema');
   assert((await findAccountGlobally('up2.admin'))?.id === before.user.id, 'upgrade kept user');
   assert((await listAuditLogs(before.tenant.id)).length === beforeLogs.length, 'upgrade kept audit');
   const p2tables = await up.getAll<{ name: string }>(`SELECT name FROM sqlite_master WHERE name='work_schedules'`);

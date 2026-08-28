@@ -3,14 +3,17 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, Text } from 'react-native';
 
 import { Screen } from '@/components/layout/Screen';
+import { CoverageBadge } from '@/components/staffing/CoverageLines';
 import { QinButton } from '@/components/ui/QinButton';
 import { QinCard } from '@/components/ui/QinCard';
 import { QinInput } from '@/components/ui/QinInput';
 import { Segmented } from '@/components/ui/Segmented';
+import { UNSET_STAFFING_REQUIREMENT_LABEL } from '@/constants/staffing';
 import { useSession } from '@/providers/SessionProvider';
 import { getUserById } from '@/repositories/userRepository';
 import { getSiteById } from '@/repositories/siteRepository';
 import { commitCopySchedules, copyDay, copyMonth, copyWeek, listSiteSchedules } from '@/services/scheduleService';
+import { listSiteCoveragesForActor } from '@/services/staffingRequirementService';
 import { evaluateScheduleWarnings } from '@/services/workforceWarningService';
 import { requireWorkforceSettings } from '@/repositories/workforceRepository';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -18,7 +21,7 @@ import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
 import { addDays } from '@/utils/scheduleTime';
 import { toDateOnly } from '@/utils/datetime';
-import type { WorkSchedule, WorkforceWarning } from '@/types';
+import type { ShiftCoverage, WorkSchedule, WorkforceWarning } from '@/types';
 
 type RangeKey = 'today' | 'week' | 'month';
 
@@ -42,6 +45,7 @@ export default function ScheduleBoardScreen() {
   const { colors, fontScale } = useTheme();
   const [range, setRange] = useState<RangeKey>('today');
   const [rows, setRows] = useState<Array<{ schedule: WorkSchedule; userName: string; siteName: string; warnings: WorkforceWarning[] }>>([]);
+  const [coverages, setCoverages] = useState<ShiftCoverage[]>([]);
   const [openId, setOpenId] = useState<string | null>(null);
   const [targetDate, setTargetDate] = useState('');
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
@@ -77,6 +81,7 @@ export default function ScheduleBoardScreen() {
       });
     }
     setRows(mapped);
+    setCoverages(await listSiteCoveragesForActor(actor, { siteId: currentSite.id, startDate: dates.startDate, endDate: dates.endDate }));
   }, [actor, currentSite, dates, tenant]);
 
   useFocusEffect(
@@ -99,7 +104,25 @@ export default function ScheduleBoardScreen() {
       {can('schedule.create') ? (
         <QinButton label="新增排班" onPress={() => router.push('/(main)/manage/schedules/new')} />
       ) : null}
-      {rows.map((row) => (
+      {coverages.map((coverage) => (
+        <QinCard key={`${coverage.workDate}-${coverage.shiftTemplateId ?? 'none'}`} style={{ marginTop: spacing.md }}>
+          <Text style={textStyle(colors, fontScale, 'md', { fontWeight: '800' })}>
+            {coverage.workDate} · {coverage.shiftName}
+          </Text>
+          <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginTop: 4 })}>
+            {coverage.siteName}
+            {coverage.requiredHeadcount != null
+              ? ` · 最低需求 ${coverage.requiredHeadcount}人 · 目前已排 ${coverage.scheduledHeadcount}人`
+              : ''}
+          </Text>
+          <CoverageBadge coverage={coverage} unsetLabel={UNSET_STAFFING_REQUIREMENT_LABEL} />
+        </QinCard>
+      ))}
+      {rows.map((row) => {
+        const coverage = coverages.find(
+          (item) => item.workDate === row.schedule.workDate && (item.shiftTemplateId ?? null) === (row.schedule.shiftTemplateId ?? null),
+        );
+        return (
         <Pressable key={row.schedule.id} onPress={() => setOpenId(openId === row.schedule.id ? null : row.schedule.id)}>
           <QinCard style={{ marginTop: spacing.md }}>
             <Text style={textStyle(colors, fontScale, 'md', { fontWeight: '800' })}>
@@ -110,6 +133,7 @@ export default function ScheduleBoardScreen() {
               {row.schedule.workDate} {row.schedule.scheduledStartAt.slice(11, 16)}～{row.schedule.scheduledEndAt.slice(11, 16)}
               {row.schedule.leaveStatus === 'leave_approved' ? ' · 已核准請假' : ''}
             </Text>
+            {coverage ? <CoverageBadge coverage={coverage} unsetLabel={UNSET_STAFFING_REQUIREMENT_LABEL} /> : null}
             {openId === row.schedule.id
               ? row.warnings.map((w) => (
                   <Text key={w.message} style={textStyle(colors, fontScale, 'xs', { color: colors.danger, marginTop: 6 })}>
@@ -119,7 +143,8 @@ export default function ScheduleBoardScreen() {
               : null}
           </QinCard>
         </Pressable>
-      ))}
+        );
+      })}
       {can('schedule.create') && currentSite ? (
         <>
           <QinInput label="複製目標日起 YYYY-MM-DD" value={targetDate} onChangeText={setTargetDate} />

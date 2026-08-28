@@ -22,3 +22,13 @@ export function staffingModeLabel(mode: string | null | undefined): string {
   }
   return '未設定勤務型態';
 }
+
+export const STAFFING_COVERAGE_STATUSES = {
+  OK: 'ok',
+  SHORT: 'short',
+  OVER: 'over',
+  UNKNOWN: 'unknown',
+} as const;
+
+export const UNSET_MINIMUM_HEADCOUNT_LABEL = '尚未設定最低勤務人數';
+export const UNSET_STAFFING_REQUIREMENT_LABEL = '尚未設定人力需求';

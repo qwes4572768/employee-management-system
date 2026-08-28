@@ -16,7 +16,9 @@ export default function MainLayout() {
     can('tenants.view') ||
     can('schedule.view') ||
     can('leave.view') ||
-    can('attendance.correct.approve');
+    can('attendance.correct.approve') ||
+    can('staffingRequirement.view') ||
+    can('staffingRequirement.manage');
 
   if (!session || user?.status !== 'active') {
     return <Redirect href="/(auth)/login" />;

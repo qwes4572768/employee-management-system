@@ -34,6 +34,9 @@ export default function ManageStack() {
       <Stack.Screen name="leave-review/index" options={{ title: '請假審核' }} />
       <Stack.Screen name="leave-review/[id]" options={{ title: '假勤審核' }} />
       <Stack.Screen name="workforce" options={{ title: '勤務與假勤設定' }} />
+      <Stack.Screen name="staffing-requirements/index" options={{ title: '人力需求' }} />
+      <Stack.Screen name="staffing-requirements/new" options={{ title: '新增人力需求' }} />
+      <Stack.Screen name="staffing-requirements/[id]" options={{ title: '人力需求詳情' }} />
     </Stack>
   );
 }

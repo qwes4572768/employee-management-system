@@ -152,3 +152,37 @@ export interface AppNotification {
   createdAt: string;
   deletedAt: string | null;
 }
+
+export type SiteShiftRequirementStatus = 'active' | 'inactive';
+
+export interface SiteShiftRequirement extends SyncMeta {
+  id: string;
+  tenantId: string;
+  siteId: string;
+  shiftTemplateId: string | null;
+  effectiveStartDate: string;
+  effectiveEndDate: string | null;
+  requiredHeadcount: number;
+  staffingMode: StaffingMode | null;
+  weekday: number | null;
+  status: SiteShiftRequirementStatus;
+}
+
+export type StaffingCoverageStatus = 'ok' | 'short' | 'over' | 'unknown';
+
+export interface ShiftCoverage {
+  siteId: string;
+  siteName: string;
+  shiftTemplateId: string | null;
+  shiftName: string;
+  workDate: string;
+  requirement: SiteShiftRequirement | null;
+  requiredHeadcount: number | null;
+  scheduledHeadcount: number;
+  scheduledAvailableHeadcount: number;
+  approvedLeaveCount: number;
+  remainingHeadcount: number;
+  shortage: number;
+  surplus: number;
+  status: StaffingCoverageStatus;
+}

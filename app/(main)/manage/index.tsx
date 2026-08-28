@@ -50,6 +50,9 @@ export default function ManageHome() {
       {can('leave.policy.manage') || can('leave.policy.view') ? (
         <ListRow title="勤務與假勤設定" subtitle="休息、遲到寬限與請假政策" onPress={() => router.push('/(main)/manage/workforce')} />
       ) : null}
+      {can('staffingRequirement.view') || can('staffingRequirement.manage') ? (
+        <ListRow title="人力需求" subtitle="設定案場班別最低勤務人數" onPress={() => router.push('/(main)/manage/staffing-requirements')} />
+      ) : null}
     </Screen>
   );
 }

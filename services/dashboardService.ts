@@ -11,6 +11,7 @@ import type { ActorContext } from './actor';
 import { actorPermissionKeys } from './access';
 import { requireActorTenant } from './tenantGuard';
 import { refreshSickLeaveOverdue } from './leaveService';
+import { listSiteCoverages, summarizeCoverages } from './staffingRequirementService';
 
 export type DutyStatus = 'not_arrived' | 'clocked_in' | 'on_duty' | 'duty_ended' | 'late' | 'exception';
 
@@ -75,6 +76,13 @@ async function enrich(
   };
 }
 
+export interface DashboardStaffingStats {
+  shortage: number;
+  unknown: boolean;
+  allUnknown: boolean;
+  knownCount: number;
+}
+
 export async function getDashboardSnapshot(
   actor: ActorContext,
   input: { siteId?: string | null; at?: Date },
@@ -82,6 +90,7 @@ export async function getDashboardSnapshot(
   primary: OnDutyCard | null;
   others: OnDutyCard[];
   managerStats: { expected: number; arrived: number; onDuty: number; late: number; missing: number } | null;
+  staffingStats: DashboardStaffingStats | null;
 }> {
   const tenantId = requireActorTenant(actor);
   const now = input.at ?? new Date();
@@ -91,11 +100,16 @@ export async function getDashboardSnapshot(
   const canViewTeam = keys.includes('schedule.view') || keys.includes('attendance.view') || keys.includes('workSession.view');
 
   if (!actor.userId) {
-    return { primary: null, others: [], managerStats: canViewTeam ? { expected: 0, arrived: 0, onDuty: 0, late: 0, missing: 0 } : null };
+    return {
+      primary: null,
+      others: [],
+      managerStats: canViewTeam ? { expected: 0, arrived: 0, onDuty: 0, late: 0, missing: 0 } : null,
+      staffingStats: null,
+    };
   }
   const self = await getUserById(actor.userId, tenantId);
   if (!self) {
-    return { primary: null, others: [], managerStats: null };
+    return { primary: null, others: [], managerStats: null, staffingStats: null };
   }
 
   const siteId = input.siteId ?? actor.siteId;
@@ -112,6 +126,7 @@ export async function getDashboardSnapshot(
 
   const others: OnDutyCard[] = [];
   let managerStats: { expected: number; arrived: number; onDuty: number; late: number; missing: number } | null = null;
+  let staffingStats: DashboardStaffingStats | null = null;
 
   if (canViewTeam && site) {
     const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
@@ -128,6 +143,19 @@ export async function getDashboardSnapshot(
     const late = attendances.filter((item) => item.status === 'late').length;
     const missing = expectedPeople.filter((item) => !arrivedIds.has(item.userId)).length;
     managerStats = { expected, arrived: arrivedIds.size, onDuty, late, missing };
+    const coverages = await listSiteCoverages({
+      tenantId,
+      siteId: site.id,
+      startDate: today,
+      endDate: today,
+    });
+    const summary = summarizeCoverages(coverages);
+    staffingStats = {
+      shortage: summary.totalShortage,
+      unknown: summary.hasUnknown,
+      allUnknown: summary.allUnknown,
+      knownCount: summary.knownCount,
+    };
 
     const seen = new Set<string>([self.id]);
     for (const schedule of expectedPeople) {
@@ -141,5 +169,5 @@ export async function getDashboardSnapshot(
     }
   }
 
-  return { primary, others, managerStats };
+  return { primary, others, managerStats, staffingStats };
 }

@@ -21,16 +21,14 @@ import {
   updatePreferredDayOffStatus,
   upsertLeaveBalance,
 } from '@/repositories/leaveRepository';
-import { getSiteById } from '@/repositories/siteRepository';
 import { getUserById, listUsersByTenant } from '@/repositories/userRepository';
 import {
   insertScheduleLeaveLink,
   listActiveSchedulesForUser,
-  listSchedulesForSiteDate,
   updateWorkSchedule,
 } from '@/repositories/workforceRepository';
 import { insertNotification } from '@/repositories/notificationRepository';
-import type { LeavePolicy, LeaveRequest, LeaveRequestAttachment, WorkSchedule } from '@/types';
+import type { LeavePolicy, LeaveRequest, LeaveRequestAttachment, ShiftCoverage, WorkSchedule } from '@/types';
 import { formatDateTimeZh, nowIso, parseDateOnly } from '@/utils/datetime';
 import { inclusiveDayCount, yearMonthOf } from '@/utils/scheduleTime';
 
@@ -38,6 +36,7 @@ import { actorPermissionKeys, requireActorPermission } from './access';
 import type { ActorContext } from './actor';
 import { writeAudit } from './auditService';
 import { getEffectivePermissionKeys } from './permissionService';
+import { computeShiftCoverage } from './staffingRequirementService';
 import { taiwanLeavePolicy } from './taiwanLeavePolicyService';
 import { requireActorTenant, requireUserInTenant, TenantAccessError } from './tenantGuard';
 
@@ -152,25 +151,24 @@ export async function affectedSchedulesForLeave(
 }
 
 export async function staffingImpactIfApproved(request: LeaveRequest): Promise<{
-  impacts: Array<{ siteId: string; siteName: string; workDate: string; required: number; remaining: number; shortage: number }>;
+  impacts: ShiftCoverage[];
 }> {
   const schedules = await affectedSchedulesForLeave(request.tenantId, request.userId, request.startDate, request.endDate);
-  const impacts = [];
+  const seen = new Set<string>();
+  const impacts: ShiftCoverage[] = [];
   for (const schedule of schedules) {
-    const same = (await listSchedulesForSiteDate(request.tenantId, schedule.siteId, schedule.workDate)).filter(
-      (item) => item.status !== 'cancelled',
+    const key = `${schedule.siteId}|${schedule.workDate}|${schedule.shiftTemplateId ?? ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    impacts.push(
+      await computeShiftCoverage({
+        tenantId: request.tenantId,
+        siteId: schedule.siteId,
+        workDate: schedule.workDate,
+        shiftTemplateId: schedule.shiftTemplateId,
+        treatUserIdAsUnavailable: request.userId,
+      }),
     );
-    const remaining = same.filter((item) => item.userId !== request.userId && item.leaveStatus !== 'leave_approved').length;
-    const required = same.length;
-    const site = await getSiteById(schedule.siteId, request.tenantId);
-    impacts.push({
-      siteId: schedule.siteId,
-      siteName: site?.name ?? schedule.siteId,
-      workDate: schedule.workDate,
-      required,
-      remaining,
-      shortage: Math.max(0, required - remaining),
-    });
   }
   return { impacts };
 }
@@ -570,7 +568,7 @@ export async function reviewLeaveRequest(
       await insertScheduleLeaveLink({ tenantId, scheduleId: schedule.id, leaveRequestId: request.id });
     }
     const impact = await staffingImpactIfApproved(updated);
-    const shortage = impact.impacts.find((item) => item.shortage > 0);
+    const shortage = impact.impacts.find((item) => item.status === 'short' && item.shortage > 0);
     if (shortage) {
       await notifyApprovers(
         tenantId,

@@ -5,6 +5,7 @@ import { Text } from 'react-native';
 import { Screen } from '@/components/layout/Screen';
 import { ListRow } from '@/components/ui/ListRow';
 import { LEAVE_TYPE_LABELS } from '@/constants/leave';
+import { UNSET_MINIMUM_HEADCOUNT_LABEL } from '@/constants/staffing';
 import { useSession } from '@/providers/SessionProvider';
 import { getUserById } from '@/repositories/userRepository';
 import { getSiteById } from '@/repositories/siteRepository';
@@ -18,7 +19,7 @@ export default function LeaveReviewListScreen() {
   const router = useRouter();
   const { actor } = useSession();
   const { colors, fontScale } = useTheme();
-  const [rows, setRows] = useState<Array<{ request: LeaveRequest; name: string; siteName: string; shortage: number }>>([]);
+  const [rows, setRows] = useState<Array<{ request: LeaveRequest; name: string; siteName: string; shortage: number; unknown: boolean }>>([]);
 
   const load = useCallback(async () => {
     const list = await listLeaveForReview(actor);
@@ -27,11 +28,13 @@ export default function LeaveReviewListScreen() {
       const user = await getUserById(request.userId, actor.tenantId ?? undefined);
       const site = request.siteId ? await getSiteById(request.siteId, actor.tenantId ?? undefined) : null;
       const impact = await staffingImpactIfApproved(request);
+      const shortage = impact.impacts.reduce((sum, item) => sum + (item.status === 'unknown' ? 0 : item.shortage), 0);
       mapped.push({
         request,
         name: user?.fullName ?? request.userId,
         siteName: site?.name ?? '—',
-        shortage: impact.impacts.reduce((sum, item) => sum + item.shortage, 0),
+        shortage,
+        unknown: impact.impacts.length === 0 || impact.impacts.every((item) => item.status === 'unknown'),
       });
     }
     setRows(mapped);
@@ -46,11 +49,11 @@ export default function LeaveReviewListScreen() {
   return (
     <Screen>
       <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginBottom: spacing.md })}>待我審核</Text>
-      {rows.map(({ request, name, siteName, shortage }) => (
+      {rows.map(({ request, name, siteName, shortage, unknown }) => (
         <ListRow
           key={request.id}
           title={name}
-          subtitle={`${LEAVE_TYPE_LABELS[request.leaveType]} · ${request.startDate}～${request.endDate} · ${request.days}日 · ${siteName}${request.isUrgent ? ' · 急件' : ''}${request.documentStatus === 'overdue' ? ' · 逾期補件' : ''}${shortage ? ` · 缺員${shortage}` : ''}`}
+          subtitle={`${LEAVE_TYPE_LABELS[request.leaveType]} · ${request.startDate}～${request.endDate} · ${request.days}日 · ${siteName}${request.isUrgent ? ' · 急件' : ''}${request.documentStatus === 'overdue' ? ' · 逾期補件' : ''}${shortage ? ` · 缺員${shortage}` : unknown ? ` · ${UNSET_MINIMUM_HEADCOUNT_LABEL}` : ''}`}
           onPress={() => router.push({ pathname: '/(main)/manage/leave-review/[id]', params: { id: request.id } })}
         />
       ))}
