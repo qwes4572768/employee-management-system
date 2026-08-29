@@ -1,7 +1,6 @@
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Platform, Text } from 'react-native';
-import { useFocusEffect } from 'expo-router';
 
 import { Screen } from '@/components/layout/Screen';
 import { ErrorBanner } from '@/components/ui/Banners';

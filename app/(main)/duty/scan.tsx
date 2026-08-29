@@ -1,4 +1,4 @@
-import { useCallback, useState, type ComponentType } from 'react';
+import { useCallback, useEffect, useState, type ComponentType } from 'react';
 import { Platform, Text, View } from 'react-native';
 
 import { Screen } from '@/components/layout/Screen';
@@ -30,13 +30,6 @@ let CameraView: ComponentType<{
   onBarcodeScanned?: (event: { data: string }) => void;
 }> | null = null;
 
-try {
-  // Native / web camera is optional; tests and desktop web still work via manual input.
-  CameraView = require('expo-camera').CameraView;
-} catch {
-  CameraView = null;
-}
-
 export default function QrScanScreen() {
   const { actor } = useSession();
   const { colors, fontScale } = useTheme();
@@ -46,6 +39,19 @@ export default function QrScanScreen() {
   const [error, setError] = useState<string | null>(null);
   const [outcome, setOutcome] = useState<QrScanOutcome | null>(null);
   const [busy, setBusy] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);
+
+  useEffect(() => {
+    void import('expo-camera')
+      .then((mod) => {
+        CameraView = mod.CameraView;
+        setCameraReady(true);
+      })
+      .catch(() => {
+        CameraView = null;
+        setCameraReady(false);
+      });
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -74,7 +80,7 @@ export default function QrScanScreen() {
 
   const cameraBlock = (
     <View style={{ flex: 1, minHeight: 240, borderRadius: 12, overflow: 'hidden', backgroundColor: '#000' }}>
-      {permission === 'granted' && CameraView ? (
+      {permission === 'granted' && cameraReady && CameraView ? (
         <CameraView
           style={{ flex: 1, minHeight: 240 }}
           facing="back"
