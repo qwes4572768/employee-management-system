@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ComponentType } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 
 import { Screen } from '@/components/layout/Screen';
@@ -23,12 +23,8 @@ import { formatDateTimeZh, formatDateZh } from '@/utils/datetime';
 import type { QrScanOutcome } from '@/types';
 import { useFocusEffect } from 'expo-router';
 
-let CameraView: ComponentType<{
-  style?: object;
-  facing?: 'back' | 'front';
-  barcodeScannerSettings?: { barcodeTypes: string[] };
-  onBarcodeScanned?: (event: { data: string }) => void;
-}> | null = null;
+type ExpoCameraView = typeof import('expo-camera').CameraView;
+let CameraView: ExpoCameraView | null = null;
 
 export default function QrScanScreen() {
   const { actor } = useSession();
