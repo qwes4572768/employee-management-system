@@ -76,6 +76,32 @@ async function enrich(
   };
 }
 
+export async function getPersonDutyCard(
+  tenantId: string,
+  userId: string,
+  at: Date = new Date(),
+): Promise<OnDutyCard | null> {
+  const user = await getUserById(userId, tenantId);
+  if (!user) return null;
+  const today = toDateOnly(at);
+  const schedules = (await listSchedulesForUserInRange(tenantId, user.id, today, today)).filter(
+    (item) => item.status !== 'cancelled',
+  );
+  const schedule = schedules[0] ?? null;
+  const site = schedule?.siteId
+    ? await getSiteById(schedule.siteId, tenantId)
+    : null;
+  const attendanceList = await listAttendanceForUser(tenantId, user.id);
+  const attendance =
+    attendanceList.find(
+      (item) =>
+        (schedule && item.scheduleId === schedule.id) ||
+        (item.clockInAt?.startsWith(today) ?? false),
+    ) ?? null;
+  const session = await getActiveWorkSession(tenantId, user.id);
+  return enrich(user, site ?? (session ? await getSiteById(session.siteId, tenantId) : null), schedule, attendance, session, at);
+}
+
 export interface DashboardStaffingStats {
   shortage: number;
   unknown: boolean;

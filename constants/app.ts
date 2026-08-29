@@ -64,6 +64,9 @@ export const MODULE_LABELS: Record<string, string> = {
   workSession: '勤務',
   leave: '假勤',
   staffingRequirement: '人力需求',
+  qrAsset: 'QR 資產',
+  qrScan: 'QR 掃描',
+  employeeQr: '人員 QR',
 };
 
 export const ACTION_LABELS: Record<string, string> = {

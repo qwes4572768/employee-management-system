@@ -33,3 +33,14 @@ export const PHASE2A1_PERMISSION_KEYS = [
   'staffingRequirement.view',
   'staffingRequirement.manage',
 ] as const;
+
+export const PHASE2B1_PERMISSION_KEYS = [
+  'qrAsset.view',
+  'qrAsset.create',
+  'qrAsset.deactivate',
+  'qrAsset.reactivate',
+  'qrAsset.export',
+  'qrScan.use',
+  'qrScan.viewHistory',
+  'employeeQr.viewOwn',
+] as const;

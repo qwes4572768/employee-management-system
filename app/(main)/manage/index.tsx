@@ -53,6 +53,9 @@ export default function ManageHome() {
       {can('staffingRequirement.view') || can('staffingRequirement.manage') ? (
         <ListRow title="人力需求" subtitle="設定案場班別最低勤務人數" onPress={() => router.push('/(main)/manage/staffing-requirements')} />
       ) : null}
+      {can('qrAsset.view') || can('qrAsset.create') ? (
+        <ListRow title="QR 資產中心" subtitle="建立與管理永久人員／案場 QR" onPress={() => router.push('/(main)/manage/qr-assets')} />
+      ) : null}
     </Screen>
   );
 }

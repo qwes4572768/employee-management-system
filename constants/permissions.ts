@@ -245,6 +245,62 @@ export const EXTRA_PERMISSIONS = [
     name: '管理人力需求',
     description: '建立、修改或停用案場班別最低勤務人數',
   },
+  {
+    permKey: 'qrAsset.view',
+    module: 'qrAsset',
+    action: 'view',
+    name: '查看 QR 資產',
+    description: '檢視永久 QR 資產中心',
+  },
+  {
+    permKey: 'qrAsset.create',
+    module: 'qrAsset',
+    action: 'create',
+    name: '建立 QR 資產',
+    description: '為人員或案場建立永久 QR',
+  },
+  {
+    permKey: 'qrAsset.deactivate',
+    module: 'qrAsset',
+    action: 'deactivate',
+    name: '停用 QR 資產',
+    description: '手動停用永久 QR',
+  },
+  {
+    permKey: 'qrAsset.reactivate',
+    module: 'qrAsset',
+    action: 'reactivate',
+    name: '重新啟用 QR 資產',
+    description: '重新啟用已停用的 QR',
+  },
+  {
+    permKey: 'qrAsset.export',
+    module: 'qrAsset',
+    action: 'export',
+    name: '匯出 QR 資產',
+    description: '匯出單張 QR 圖片',
+  },
+  {
+    permKey: 'qrScan.use',
+    module: 'qrScan',
+    action: 'use',
+    name: '使用 QR 掃描',
+    description: '掃描勤管系統永久 QR',
+  },
+  {
+    permKey: 'qrScan.viewHistory',
+    module: 'qrScan',
+    action: 'viewHistory',
+    name: '查看掃描紀錄',
+    description: '檢視 QR 掃描紀錄',
+  },
+  {
+    permKey: 'employeeQr.viewOwn',
+    module: 'employeeQr',
+    action: 'viewOwn',
+    name: '查看自己的人員 QR',
+    description: '檢視本人永久人員 QR',
+  },
 ] as const;
 
 export function permissionKey(module: string, action: string): string {
@@ -347,6 +403,13 @@ export const MANAGER_DEFAULT_PERMISSIONS = [
   'leave.interview.record',
   'staffingRequirement.view',
   'staffingRequirement.manage',
+  'qrAsset.view',
+  'qrAsset.create',
+  'qrAsset.deactivate',
+  'qrAsset.reactivate',
+  'qrAsset.export',
+  'qrScan.use',
+  'qrScan.viewHistory',
 ] as const;
 
 export const STAFF_DEFAULT_PERMISSIONS = [
@@ -364,4 +427,6 @@ export const STAFF_DEFAULT_PERMISSIONS = [
   'leave.request',
   'leave.attachment.upload',
   'leave.balance.viewOwn',
+  'employeeQr.viewOwn',
+  'qrScan.use',
 ] as const;

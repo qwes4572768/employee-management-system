@@ -37,6 +37,11 @@ export default function ManageStack() {
       <Stack.Screen name="staffing-requirements/index" options={{ title: '人力需求' }} />
       <Stack.Screen name="staffing-requirements/new" options={{ title: '新增人力需求' }} />
       <Stack.Screen name="staffing-requirements/[id]" options={{ title: '人力需求詳情' }} />
+      <Stack.Screen name="qr-assets/index" options={{ title: 'QR 資產中心' }} />
+      <Stack.Screen name="qr-assets/new-employee" options={{ title: '建立人員 QR' }} />
+      <Stack.Screen name="qr-assets/new-site" options={{ title: '建立案場 QR' }} />
+      <Stack.Screen name="qr-assets/[id]" options={{ title: 'QR 詳情' }} />
+      <Stack.Screen name="qr-assets/scans" options={{ title: '掃描紀錄' }} />
     </Stack>
   );
 }

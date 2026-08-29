@@ -16,7 +16,7 @@ import { formatDateZh } from '@/utils/datetime';
 
 export default function MeHome() {
   const router = useRouter();
-  const { user, tenant, roles, actor, refresh } = useSession();
+  const { user, tenant, roles, actor, refresh, can } = useSession();
   const { colors, fontScale } = useTheme();
 
   if (!user) {
@@ -38,6 +38,9 @@ export default function MeHome() {
         </Text>
       </QinCard>
       <ListRow title="個人資料" subtitle="照片、姓名、手機、員工編號、性別、到職日、職稱" onPress={() => router.push('/(main)/me/profile')} />
+      {can('employeeQr.viewOwn') ? (
+        <ListRow title="我的 QR" subtitle="查看主管核發的永久人員 QR" onPress={() => router.push('/(main)/me/qr')} />
+      ) : null}
       <ListRow title="修改密碼" subtitle="密碼變更走獨立流程" onPress={() => router.push('/(main)/me/password')} />
       <ListRow title="顯示設定" subtitle="主題、文字大小" onPress={() => router.push('/(main)/me/appearance')} />
       <QinButton

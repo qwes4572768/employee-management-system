@@ -70,6 +70,9 @@ export default function DutyHome() {
       {can('attendance.correct.request') ? (
         <ListRow title="申請補卡" subtitle="缺卡或時間更正，需主管核准" onPress={() => router.push('/(main)/duty/correction-new')} />
       ) : null}
+      {can('qrScan.use') ? (
+        <ListRow title="掃描 QR" subtitle="識別人員或案場永久 QR" onPress={() => router.push('/(main)/duty/scan')} />
+      ) : null}
 
       <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm })}>
         本機通知

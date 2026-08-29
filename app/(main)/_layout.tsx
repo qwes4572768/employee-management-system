@@ -18,7 +18,9 @@ export default function MainLayout() {
     can('leave.view') ||
     can('attendance.correct.approve') ||
     can('staffingRequirement.view') ||
-    can('staffingRequirement.manage');
+    can('staffingRequirement.manage') ||
+    can('qrAsset.view') ||
+    can('qrAsset.create');
 
   if (!session || user?.status !== 'active') {
     return <Redirect href="/(auth)/login" />;

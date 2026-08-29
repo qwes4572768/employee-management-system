@@ -25,6 +25,13 @@ export type {
   ScheduleLeaveLink,
 } from './leave';
 export type {
+  EmployeeQrProfile,
+  QrAsset,
+  QrScanLog,
+  QrScanOutcome,
+  SiteQrProfile,
+} from './qr';
+export type {
   AuditLog,
   AuditResult,
   AuthContextValue,
