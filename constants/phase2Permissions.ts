@@ -59,3 +59,22 @@ export const PHASE2B2_PERMISSION_KEYS = [
   'patrolException.manage',
   'patrolDashboard.view',
 ] as const;
+
+export const PHASE2C_PERMISSION_KEYS = [
+  'inspection.scan',
+  'inspection.create',
+  'inspection.viewOwn',
+  'inspection.view',
+  'inspection.evaluate',
+  'inspection.evidence.upload',
+  'inspectionCriteria.view',
+  'inspectionCriteria.manage',
+  'improvement.create',
+  'improvement.view',
+  'improvement.review',
+  'improvement.close',
+  'discipline.recommend',
+  'discipline.review',
+  'discipline.approve',
+  'inspectionDashboard.view',
+] as const;

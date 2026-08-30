@@ -65,6 +65,18 @@ export default function ManageHome() {
       {can('patrolDashboard.view') ? (
         <ListRow title="巡邏戰情" subtitle="今日完成率、漏巡、逾時與異常" onPress={() => router.push('/(main)/manage/patrol-dashboard')} />
       ) : null}
+      {can('inspectionDashboard.view') ? (
+        <ListRow title="督勤戰情" subtitle="今日督勤、平均分、重大缺失與待審" onPress={() => router.push('/(main)/manage/inspection-dashboard')} />
+      ) : null}
+      {can('inspectionCriteria.view') || can('inspectionCriteria.manage') ? (
+        <ListRow title="評核項目" subtitle="啟用、停用、權重與分數門檻" onPress={() => router.push('/(main)/manage/inspection-criteria')} />
+      ) : null}
+      {can('improvement.review') || can('improvement.view') ? (
+        <ListRow title="改善審核" subtitle="確認或退回員工改善回覆" onPress={() => router.push('/(main)/manage/improvements')} />
+      ) : null}
+      {can('discipline.review') || can('discipline.approve') ? (
+        <ListRow title="懲處審核" subtitle="核決懲處建議，不會直接扣薪" onPress={() => router.push('/(main)/manage/discipline')} />
+      ) : null}
     </Screen>
   );
 }

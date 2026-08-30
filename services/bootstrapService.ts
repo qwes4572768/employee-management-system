@@ -10,6 +10,7 @@ import { insertTenant } from '@/repositories/tenantRepository';
 import { insertUser } from '@/repositories/userRepository';
 import { ensureTenantWorkforceDefaults } from '@/repositories/workforceRepository';
 import { ensureLeavePolicy } from '@/repositories/leaveRepository';
+import { ensureInspectionCatalog } from '@/repositories/inspectionCatalogRepository';
 import type { Gender, Tenant, User } from '@/types';
 import { hashPassword, validatePasswordStrength } from '@/utils/password';
 import {
@@ -107,6 +108,7 @@ export async function bootstrapSystem(input: {
   });
   await ensureTenantWorkforceDefaults(tenant.id);
   await ensureLeavePolicy(tenant.id);
+  await ensureInspectionCatalog(tenant.id);
 
   const user = await insertUser({
     tenantId: tenant.id,

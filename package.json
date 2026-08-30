@@ -10,7 +10,7 @@
     "web": "expo start --web",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "tsx tests/phase1.test.ts && tsx tests/phase1_integrity.test.ts && tsx tests/phase2a.test.ts && tsx tests/phase2a1.test.ts && tsx tests/phase2b1.test.ts && tsx tests/phase2b2.test.ts",
+    "test": "tsx tests/phase1.test.ts && tsx tests/phase1_integrity.test.ts && tsx tests/phase2a.test.ts && tsx tests/phase2a1.test.ts && tsx tests/phase2b1.test.ts && tsx tests/phase2b2.test.ts && tsx tests/phase2c.test.ts",
     "brand:sync": "python3 scripts/sync-brand-assets.py",
     "doctor": "npx expo-doctor"
   },

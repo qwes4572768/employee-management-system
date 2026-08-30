@@ -51,6 +51,12 @@ export default function ManageStack() {
       <Stack.Screen name="patrol-templates/[id]" options={{ title: '巡邏模板詳情' }} />
       <Stack.Screen name="patrol-dashboard/index" options={{ title: '巡邏戰情' }} />
       <Stack.Screen name="patrol-dashboard/[taskId]" options={{ title: '巡邏任務明細' }} />
+      <Stack.Screen name="inspection-dashboard/index" options={{ title: '督勤戰情' }} />
+      <Stack.Screen name="inspection-criteria/index" options={{ title: '評核項目' }} />
+      <Stack.Screen name="improvements/index" options={{ title: '改善審核' }} />
+      <Stack.Screen name="improvements/[id]" options={{ title: '改善審核明細' }} />
+      <Stack.Screen name="discipline/index" options={{ title: '懲處審核' }} />
+      <Stack.Screen name="discipline/[id]" options={{ title: '懲處審核明細' }} />
     </Stack>
   );
 }

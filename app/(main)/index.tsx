@@ -12,7 +12,8 @@ import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { GENDER_LABELS } from '@/constants/app';
 import { useSession } from '@/providers/SessionProvider';
 import { DUTY_STATUS_LABELS, getDashboardSnapshot, type DashboardStaffingStats, type OnDutyCard } from '@/services/dashboardService';
-import type { PatrolHomeCard, PatrolSiteDashboard } from '@/types';
+import { INSPECTION_GRADE_LABELS } from '@/constants/inspection';
+import type { InspectionHomeCard, InspectionSiteDashboard, PatrolHomeCard, PatrolSiteDashboard } from '@/types';
 import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
@@ -28,6 +29,8 @@ export default function DashboardScreen() {
   const [staffing, setStaffing] = useState<DashboardStaffingStats | null>(null);
   const [patrolCard, setPatrolCard] = useState<PatrolHomeCard | null>(null);
   const [patrolSite, setPatrolSite] = useState<PatrolSiteDashboard | null>(null);
+  const [inspectionCard, setInspectionCard] = useState<InspectionHomeCard | null>(null);
+  const [inspectionSite, setInspectionSite] = useState<InspectionSiteDashboard | null>(null);
   const [selected, setSelected] = useState<OnDutyCard | null>(null);
 
   const load = useCallback(async () => {
@@ -38,6 +41,8 @@ export default function DashboardScreen() {
     setStaffing(snap.staffingStats);
     setPatrolCard(snap.patrolCard);
     setPatrolSite(snap.patrolSite);
+    setInspectionCard(snap.inspectionCard);
+    setInspectionSite(snap.inspectionSite);
     setSelected(snap.primary);
   }, [actor, currentSite?.id]);
 
@@ -184,7 +189,26 @@ export default function DashboardScreen() {
         ) : (
           <StatCard label="本班巡邏" value="—" hint="尚無巡邏任務" />
         )}
-        <StatCard label="督勤提醒" value="—" hint="功能尚未啟用" />
+        {inspectionSite ? (
+          <>
+            <StatCard label="今日督勤" value={String(inspectionSite.todayCount)} hint={`平均 ${inspectionSite.averageScore ?? '—'} 分`} />
+            <StatCard label="重大缺失" value={String(inspectionSite.majorCount)} hint={`不合格 ${inspectionSite.failCount}`} />
+            <StatCard label="待審核" value={String(inspectionSite.pendingDiscipline)} hint="懲處建議待核決" />
+            <StatCard
+              label="待改善"
+              value={String(inspectionSite.openImprovements)}
+              hint={inspectionSite.overdueImprovements > 0 ? `逾期 ${inspectionSite.overdueImprovements}` : '改善事項'}
+            />
+          </>
+        ) : inspectionCard?.latest ? (
+          <StatCard
+            label="最近督勤"
+            value={`${inspectionCard.latestScore ?? '—'} 分`}
+            hint={`${INSPECTION_GRADE_LABELS[inspectionCard.latestGrade ?? 'pass']} · 改善待辦 ${inspectionCard.openImprovements}`}
+          />
+        ) : (
+          <StatCard label="督勤提醒" value={inspectionCard ? String(inspectionCard.openImprovements) : '—'} hint={inspectionCard?.openImprovements ? '改善待辦' : '尚無督勤紀錄'} />
+        )}
       </StatGrid>
       <SiteSwitcher
         visible={switcher}

@@ -46,6 +46,23 @@ export type {
   PatrolTemplatePoint,
 } from './patrol';
 export type {
+  DisciplinaryRecommendation,
+  DisciplinaryReview,
+  ImprovementFollowup,
+  ImprovementOrder,
+  InspectionCheckItem,
+  InspectionCriteria,
+  InspectionEmployeeCard,
+  InspectionEvaluation,
+  InspectionEvaluationItem,
+  InspectionEvidence,
+  InspectionHomeCard,
+  InspectionPolicy,
+  InspectionSession,
+  InspectionSiteDashboard,
+  InspectionVerification,
+} from './inspection';
+export type {
   AuditLog,
   AuditResult,
   AuthContextValue,

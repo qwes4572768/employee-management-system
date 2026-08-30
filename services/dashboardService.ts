@@ -3,7 +3,17 @@ import { getActiveWorkSession, listActiveWorkSessionsForSite } from '@/repositor
 import { getUserById } from '@/repositories/userRepository';
 import { getSiteById } from '@/repositories/siteRepository';
 import { getShiftTemplateById, listSchedulesForSiteDate, listSchedulesForUserInRange } from '@/repositories/workforceRepository';
-import type { AttendanceRecord, PatrolHomeCard, PatrolSiteDashboard, Site, User, WorkSchedule, WorkSession } from '@/types';
+import type {
+  AttendanceRecord,
+  InspectionHomeCard,
+  InspectionSiteDashboard,
+  PatrolHomeCard,
+  PatrolSiteDashboard,
+  Site,
+  User,
+  WorkSchedule,
+  WorkSession,
+} from '@/types';
 import { toDateOnly } from '@/utils/datetime';
 import { formatDurationZh, formatHmFromIso, minutesBetween } from '@/utils/scheduleTime';
 
@@ -14,6 +24,7 @@ import { refreshSickLeaveOverdue } from './leaveService';
 import { listSiteCoverages, summarizeCoverages } from './staffingRequirementService';
 import { getOwnActivePatrolCard } from './patrolTaskService';
 import { getManagerPatrolHomeStats } from './patrolDashboardService';
+import { getInspectionHomeCard, getInspectionSiteDashboard } from './inspectionDashboardService';
 
 export type DutyStatus = 'not_arrived' | 'clocked_in' | 'on_duty' | 'duty_ended' | 'late' | 'exception';
 
@@ -121,6 +132,8 @@ export async function getDashboardSnapshot(
   staffingStats: DashboardStaffingStats | null;
   patrolCard: PatrolHomeCard | null;
   patrolSite: PatrolSiteDashboard | null;
+  inspectionCard: InspectionHomeCard | null;
+  inspectionSite: InspectionSiteDashboard | null;
 }> {
   const tenantId = requireActorTenant(actor);
   const now = input.at ?? new Date();
@@ -137,11 +150,22 @@ export async function getDashboardSnapshot(
       staffingStats: null,
       patrolCard: null,
       patrolSite: null,
+      inspectionCard: null,
+      inspectionSite: null,
     };
   }
   const self = await getUserById(actor.userId, tenantId);
   if (!self) {
-    return { primary: null, others: [], managerStats: null, staffingStats: null, patrolCard: null, patrolSite: null };
+    return {
+      primary: null,
+      others: [],
+      managerStats: null,
+      staffingStats: null,
+      patrolCard: null,
+      patrolSite: null,
+      inspectionCard: null,
+      inspectionSite: null,
+    };
   }
 
   const siteId = input.siteId ?? actor.siteId;
@@ -218,5 +242,22 @@ export async function getDashboardSnapshot(
     }
   }
 
-  return { primary, others, managerStats, staffingStats, patrolCard, patrolSite };
+  let inspectionCard: InspectionHomeCard | null = null;
+  let inspectionSite: InspectionSiteDashboard | null = null;
+  if (keys.includes('inspection.viewOwn')) {
+    try {
+      inspectionCard = await getInspectionHomeCard(actor);
+    } catch {
+      inspectionCard = null;
+    }
+  }
+  if (keys.includes('inspectionDashboard.view') && site) {
+    try {
+      inspectionSite = await getInspectionSiteDashboard(actor, site.id, now);
+    } catch {
+      inspectionSite = null;
+    }
+  }
+
+  return { primary, others, managerStats, staffingStats, patrolCard, patrolSite, inspectionCard, inspectionSite };
 }

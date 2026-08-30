@@ -385,6 +385,22 @@ export const EXTRA_PERMISSIONS = [
     name: '查看巡邏戰情',
     description: '檢視案場巡邏戰情中心',
   },
+  { permKey: 'inspection.scan', module: 'inspection', action: 'scan', name: '掃碼督勤', description: '掃描員工永久 QR 開始督勤' },
+  { permKey: 'inspection.create', module: 'inspection', action: 'create', name: '建立督勤', description: '建立督勤 Session' },
+  { permKey: 'inspection.viewOwn', module: 'inspection', action: 'viewOwn', name: '查看自己的督勤', description: '檢視本人督勤紀錄' },
+  { permKey: 'inspection.view', module: 'inspection', action: 'view', name: '查看督勤', description: '檢視案場督勤紀錄' },
+  { permKey: 'inspection.evaluate', module: 'inspection', action: 'evaluate', name: '填寫督勤評核', description: '填寫或完成督勤評核' },
+  { permKey: 'inspection.evidence.upload', module: 'inspection', action: 'evidence.upload', name: '上傳督勤證據', description: '拍攝督勤現場照片' },
+  { permKey: 'inspectionCriteria.view', module: 'inspectionCriteria', action: 'view', name: '查看評核項目', description: '檢視督勤評核項目' },
+  { permKey: 'inspectionCriteria.manage', module: 'inspectionCriteria', action: 'manage', name: '管理評核項目', description: '啟用、停用或調整評核項目' },
+  { permKey: 'improvement.create', module: 'improvement', action: 'create', name: '建立改善要求', description: '提出缺失改善要求' },
+  { permKey: 'improvement.view', module: 'improvement', action: 'view', name: '查看改善事項', description: '檢視改善要求' },
+  { permKey: 'improvement.review', module: 'improvement', action: 'review', name: '審核改善', description: '確認或退回改善回覆' },
+  { permKey: 'improvement.close', module: 'improvement', action: 'close', name: '結案改善', description: '關閉改善事項' },
+  { permKey: 'discipline.recommend', module: 'discipline', action: 'recommend', name: '提出懲處建議', description: '提出懲處或賠償建議' },
+  { permKey: 'discipline.review', module: 'discipline', action: 'review', name: '審核懲處建議', description: '檢視待審懲處建議' },
+  { permKey: 'discipline.approve', module: 'discipline', action: 'approve', name: '核決懲處', description: '核准、拒絕或退回懲處建議' },
+  { permKey: 'inspectionDashboard.view', module: 'inspectionDashboard', action: 'view', name: '查看督勤戰情', description: '檢視案場督勤戰情' },
 ] as const;
 
 export function permissionKey(module: string, action: string): string {
@@ -506,6 +522,22 @@ export const MANAGER_DEFAULT_PERMISSIONS = [
   'patrolException.view',
   'patrolException.manage',
   'patrolDashboard.view',
+  'inspection.scan',
+  'inspection.create',
+  'inspection.viewOwn',
+  'inspection.view',
+  'inspection.evaluate',
+  'inspection.evidence.upload',
+  'inspectionCriteria.view',
+  'inspectionCriteria.manage',
+  'improvement.create',
+  'improvement.view',
+  'improvement.review',
+  'improvement.close',
+  'discipline.recommend',
+  'discipline.review',
+  'discipline.approve',
+  'inspectionDashboard.view',
 ] as const;
 
 export const STAFF_DEFAULT_PERMISSIONS = [
@@ -528,4 +560,6 @@ export const STAFF_DEFAULT_PERMISSIONS = [
   'patrol.viewOwn',
   'patrol.execute',
   'patrolException.create',
+  'inspection.viewOwn',
+  'improvement.view',
 ] as const;

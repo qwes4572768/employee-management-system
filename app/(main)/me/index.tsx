@@ -41,6 +41,12 @@ export default function MeHome() {
       {can('employeeQr.viewOwn') ? (
         <ListRow title="我的 QR" subtitle="查看主管核發的永久人員 QR" onPress={() => router.push('/(main)/me/qr')} />
       ) : null}
+      {can('inspection.viewOwn') || can('inspection.view') ? (
+        <ListRow title="督勤紀錄" subtitle="日期、案場、分數與改善狀態" onPress={() => router.push('/(main)/me/inspections')} />
+      ) : null}
+      {can('improvement.view') ? (
+        <ListRow title="改善事項" subtitle="查看問題、期限與提交改善" onPress={() => router.push('/(main)/me/improvements')} />
+      ) : null}
       <ListRow title="修改密碼" subtitle="密碼變更走獨立流程" onPress={() => router.push('/(main)/me/password')} />
       <ListRow title="顯示設定" subtitle="主題、文字大小" onPress={() => router.push('/(main)/me/appearance')} />
       <QinButton

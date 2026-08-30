@@ -18,6 +18,9 @@ export default function MeStack() {
       <Stack.Screen name="password" options={{ title: '修改密碼' }} />
       <Stack.Screen name="appearance" options={{ title: '顯示設定' }} />
       <Stack.Screen name="qr" options={{ title: '我的 QR' }} />
+      <Stack.Screen name="inspections" options={{ title: '督勤紀錄' }} />
+      <Stack.Screen name="improvements/index" options={{ title: '改善事項' }} />
+      <Stack.Screen name="improvements/[id]" options={{ title: '改善回覆' }} />
     </Stack>
   );
 }

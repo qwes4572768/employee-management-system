@@ -20,7 +20,11 @@ export default function MainLayout() {
     can('staffingRequirement.view') ||
     can('staffingRequirement.manage') ||
     can('qrAsset.view') ||
-    can('qrAsset.create');
+    can('qrAsset.create') ||
+    can('inspectionDashboard.view') ||
+    can('inspectionCriteria.view') ||
+    can('improvement.review') ||
+    can('discipline.review');
 
   if (!session || user?.status !== 'active') {
     return <Redirect href="/(auth)/login" />;
@@ -52,6 +56,21 @@ export default function MainLayout() {
         options={{
           title: '勤務',
           tabBarIcon: ({ color, size }) => <Ionicons name="shield-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="inspect"
+        options={{
+          title: '掃碼督勤',
+          href: can('inspection.scan') ? undefined : null,
+          tabBarIcon: ({ color, size }) => <Ionicons name="scan-outline" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: '訊息',
+          tabBarIcon: ({ color, size }) => <Ionicons name="chatbubble-ellipses-outline" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
