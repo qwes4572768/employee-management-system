@@ -32,6 +32,20 @@ export type {
   SiteQrProfile,
 } from './qr';
 export type {
+  PatrolCheckRecord,
+  PatrolEvidence,
+  PatrolException,
+  PatrolHomeCard,
+  PatrolPoint,
+  PatrolPointView,
+  PatrolSiteDashboard,
+  PatrolTask,
+  PatrolTaskPoint,
+  PatrolTaskStats,
+  PatrolTemplate,
+  PatrolTemplatePoint,
+} from './patrol';
+export type {
   AuditLog,
   AuditResult,
   AuthContextValue,

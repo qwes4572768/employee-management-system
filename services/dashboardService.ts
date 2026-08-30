@@ -3,7 +3,7 @@ import { getActiveWorkSession, listActiveWorkSessionsForSite } from '@/repositor
 import { getUserById } from '@/repositories/userRepository';
 import { getSiteById } from '@/repositories/siteRepository';
 import { getShiftTemplateById, listSchedulesForSiteDate, listSchedulesForUserInRange } from '@/repositories/workforceRepository';
-import type { AttendanceRecord, Site, User, WorkSchedule, WorkSession } from '@/types';
+import type { AttendanceRecord, PatrolHomeCard, PatrolSiteDashboard, Site, User, WorkSchedule, WorkSession } from '@/types';
 import { toDateOnly } from '@/utils/datetime';
 import { formatDurationZh, formatHmFromIso, minutesBetween } from '@/utils/scheduleTime';
 
@@ -12,6 +12,8 @@ import { actorPermissionKeys } from './access';
 import { requireActorTenant } from './tenantGuard';
 import { refreshSickLeaveOverdue } from './leaveService';
 import { listSiteCoverages, summarizeCoverages } from './staffingRequirementService';
+import { getOwnActivePatrolCard } from './patrolTaskService';
+import { getManagerPatrolHomeStats } from './patrolDashboardService';
 
 export type DutyStatus = 'not_arrived' | 'clocked_in' | 'on_duty' | 'duty_ended' | 'late' | 'exception';
 
@@ -117,6 +119,8 @@ export async function getDashboardSnapshot(
   others: OnDutyCard[];
   managerStats: { expected: number; arrived: number; onDuty: number; late: number; missing: number } | null;
   staffingStats: DashboardStaffingStats | null;
+  patrolCard: PatrolHomeCard | null;
+  patrolSite: PatrolSiteDashboard | null;
 }> {
   const tenantId = requireActorTenant(actor);
   const now = input.at ?? new Date();
@@ -131,11 +135,13 @@ export async function getDashboardSnapshot(
       others: [],
       managerStats: canViewTeam ? { expected: 0, arrived: 0, onDuty: 0, late: 0, missing: 0 } : null,
       staffingStats: null,
+      patrolCard: null,
+      patrolSite: null,
     };
   }
   const self = await getUserById(actor.userId, tenantId);
   if (!self) {
-    return { primary: null, others: [], managerStats: null, staffingStats: null };
+    return { primary: null, others: [], managerStats: null, staffingStats: null, patrolCard: null, patrolSite: null };
   }
 
   const siteId = input.siteId ?? actor.siteId;
@@ -195,5 +201,22 @@ export async function getDashboardSnapshot(
     }
   }
 
-  return { primary, others, managerStats, staffingStats };
+  let patrolCard: PatrolHomeCard | null = null;
+  let patrolSite: PatrolSiteDashboard | null = null;
+  if (keys.includes('patrol.viewOwn')) {
+    try {
+      patrolCard = await getOwnActivePatrolCard(actor, now);
+    } catch {
+      patrolCard = null;
+    }
+  }
+  if (keys.includes('patrolDashboard.view') && site) {
+    try {
+      patrolSite = await getManagerPatrolHomeStats(actor, site.id, now);
+    } catch {
+      patrolSite = null;
+    }
+  }
+
+  return { primary, others, managerStats, staffingStats, patrolCard, patrolSite };
 }

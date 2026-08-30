@@ -107,6 +107,8 @@ export async function startWorkSession(
     after: session,
     siteId: site.id,
   });
+  const { generatePatrolTasksForSession } = await import('./patrolTaskService');
+  await generatePatrolTasksForSession(actor, session, new Date(startedAt));
   return session;
 }
 

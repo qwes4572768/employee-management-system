@@ -73,6 +73,9 @@ export default function DutyHome() {
       {can('qrScan.use') ? (
         <ListRow title="掃描 QR" subtitle="識別人員或案場永久 QR" onPress={() => router.push('/(main)/duty/scan')} />
       ) : null}
+      {can('patrol.viewOwn') || can('patrol.execute') ? (
+        <ListRow title="智慧巡邏" subtitle="本班巡邏進度、下一點與現場驗證" onPress={() => router.push('/(main)/duty/patrol')} />
+      ) : null}
 
       <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm })}>
         本機通知

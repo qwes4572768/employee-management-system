@@ -44,3 +44,18 @@ export const PHASE2B1_PERMISSION_KEYS = [
   'qrScan.viewHistory',
   'employeeQr.viewOwn',
 ] as const;
+
+export const PHASE2B2_PERMISSION_KEYS = [
+  'patrolPoint.view',
+  'patrolPoint.manage',
+  'patrolTemplate.view',
+  'patrolTemplate.manage',
+  'patrol.viewOwn',
+  'patrol.view',
+  'patrol.execute',
+  'patrol.manualOverride',
+  'patrolException.create',
+  'patrolException.view',
+  'patrolException.manage',
+  'patrolDashboard.view',
+] as const;

@@ -21,6 +21,10 @@ export default function DutyLayout() {
       <Stack.Screen name="leave-detail" options={{ title: '假勤明細' }} />
       <Stack.Screen name="correction-new" options={{ title: '申請補卡' }} />
       <Stack.Screen name="scan" options={{ title: '掃描 QR' }} />
+      <Stack.Screen name="patrol/index" options={{ title: '智慧巡邏' }} />
+      <Stack.Screen name="patrol/[taskId]" options={{ title: '巡邏任務' }} />
+      <Stack.Screen name="patrol/check" options={{ title: '完成巡邏點' }} />
+      <Stack.Screen name="patrol/exception" options={{ title: '發現異常' }} />
     </Stack>
   );
 }

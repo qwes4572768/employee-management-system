@@ -42,6 +42,15 @@ export default function ManageStack() {
       <Stack.Screen name="qr-assets/new-site" options={{ title: '建立案場 QR' }} />
       <Stack.Screen name="qr-assets/[id]" options={{ title: 'QR 詳情' }} />
       <Stack.Screen name="qr-assets/scans" options={{ title: '掃描紀錄' }} />
+      <Stack.Screen name="qr-assets/new-patrol-point" options={{ title: '建立巡邏點 QR' }} />
+      <Stack.Screen name="patrol-points/index" options={{ title: '巡邏點管理' }} />
+      <Stack.Screen name="patrol-points/new" options={{ title: '新增巡邏點' }} />
+      <Stack.Screen name="patrol-points/[id]" options={{ title: '巡邏點詳情' }} />
+      <Stack.Screen name="patrol-templates/index" options={{ title: '巡邏模板' }} />
+      <Stack.Screen name="patrol-templates/new" options={{ title: '新增巡邏模板' }} />
+      <Stack.Screen name="patrol-templates/[id]" options={{ title: '巡邏模板詳情' }} />
+      <Stack.Screen name="patrol-dashboard/index" options={{ title: '巡邏戰情' }} />
+      <Stack.Screen name="patrol-dashboard/[taskId]" options={{ title: '巡邏任務明細' }} />
     </Stack>
   );
 }

@@ -59,6 +59,7 @@ export default function QrAssetCenterScreen() {
         <>
           <QinButton label="建立人員 QR" onPress={() => router.push('/(main)/manage/qr-assets/new-employee')} />
           <QinButton label="建立案場 QR" variant="secondary" onPress={() => router.push('/(main)/manage/qr-assets/new-site')} />
+          <QinButton label="建立巡邏點 QR" variant="secondary" onPress={() => router.push('/(main)/manage/qr-assets/new-patrol-point')} />
         </>
       ) : null}
       {can('qrScan.viewHistory') ? (

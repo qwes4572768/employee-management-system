@@ -54,7 +54,16 @@ export default function ManageHome() {
         <ListRow title="人力需求" subtitle="設定案場班別最低勤務人數" onPress={() => router.push('/(main)/manage/staffing-requirements')} />
       ) : null}
       {can('qrAsset.view') || can('qrAsset.create') ? (
-        <ListRow title="QR 資產中心" subtitle="建立與管理永久人員／案場 QR" onPress={() => router.push('/(main)/manage/qr-assets')} />
+        <ListRow title="QR 資產中心" subtitle="建立與管理永久人員／案場／巡邏點 QR" onPress={() => router.push('/(main)/manage/qr-assets')} />
+      ) : null}
+      {can('patrolPoint.view') || can('patrolPoint.manage') ? (
+        <ListRow title="巡邏點管理" subtitle="建立巡邏點與永久 QR 規則" onPress={() => router.push('/(main)/manage/patrol-points')} />
+      ) : null}
+      {can('patrolTemplate.view') || can('patrolTemplate.manage') ? (
+        <ListRow title="巡邏模板" subtitle="時間窗、順序與重點巡邏點" onPress={() => router.push('/(main)/manage/patrol-templates')} />
+      ) : null}
+      {can('patrolDashboard.view') ? (
+        <ListRow title="巡邏戰情" subtitle="今日完成率、漏巡、逾時與異常" onPress={() => router.push('/(main)/manage/patrol-dashboard')} />
       ) : null}
     </Screen>
   );

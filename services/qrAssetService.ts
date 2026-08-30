@@ -7,6 +7,7 @@ import {
   listQrAssets,
   reactivateQrAsset,
 } from '@/repositories/qrAssetRepository';
+import { getPatrolPointById } from '@/repositories/patrolPointRepository';
 import { getSiteById } from '@/repositories/siteRepository';
 import { getTenantById } from '@/repositories/tenantRepository';
 import { getUserById, listUsersByTenant } from '@/repositories/userRepository';
@@ -152,7 +153,7 @@ async function issueQr(
   const tenantId = requireActorTenant(actor);
   await requireActorPermission(actor, 'qrAsset.create');
   if (!QR_PHASE_COMPLETE_TYPES.includes(input.assetType)) {
-    throw new Error(`${QR_ASSET_TYPE_LABELS[input.assetType]}將於後續階段建立，本階段僅支援人員與案場 QR`);
+    throw new Error(`${QR_ASSET_TYPE_LABELS[input.assetType]}將於後續階段建立，本階段僅支援人員、案場與巡邏點 QR`);
   }
   const existing = await getActiveQrAssetForTarget(tenantId, input.assetType, input.targetId);
   if (existing && !input.regenerate) {
@@ -238,6 +239,30 @@ export async function issueSiteQr(actor: ActorContext, siteId: string, regenerat
     targetId: site.id,
     siteId: site.id,
     displayName: site.name,
+    regenerate,
+  });
+}
+
+export async function issuePatrolPointQr(
+  actor: ActorContext,
+  pointId: string,
+  regenerate = false,
+): Promise<QrAsset> {
+  const tenantId = requireActorTenant(actor);
+  const point = await getPatrolPointById(pointId, tenantId);
+  if (!point) {
+    const existing = await getPatrolPointById(pointId);
+    if (existing) throw new TenantAccessError();
+    throw new Error('找不到巡邏點');
+  }
+  if (!(await actorCanAccessSite(actor, point.siteId))) {
+    throw new Error('您沒有權限為此巡邏點建立 QR');
+  }
+  return issueQr(actor, {
+    assetType: QR_ASSET_TYPES.PATROL_POINT,
+    targetId: point.id,
+    siteId: point.siteId,
+    displayName: point.name,
     regenerate,
   });
 }

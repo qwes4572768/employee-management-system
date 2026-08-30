@@ -12,6 +12,7 @@ import { StatCard, StatGrid } from '@/components/ui/StatCard';
 import { GENDER_LABELS } from '@/constants/app';
 import { useSession } from '@/providers/SessionProvider';
 import { DUTY_STATUS_LABELS, getDashboardSnapshot, type DashboardStaffingStats, type OnDutyCard } from '@/services/dashboardService';
+import type { PatrolHomeCard, PatrolSiteDashboard } from '@/types';
 import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
@@ -25,6 +26,8 @@ export default function DashboardScreen() {
   const [others, setOthers] = useState<OnDutyCard[]>([]);
   const [stats, setStats] = useState<{ expected: number; arrived: number; onDuty: number; late: number; missing: number } | null>(null);
   const [staffing, setStaffing] = useState<DashboardStaffingStats | null>(null);
+  const [patrolCard, setPatrolCard] = useState<PatrolHomeCard | null>(null);
+  const [patrolSite, setPatrolSite] = useState<PatrolSiteDashboard | null>(null);
   const [selected, setSelected] = useState<OnDutyCard | null>(null);
 
   const load = useCallback(async () => {
@@ -33,6 +36,8 @@ export default function DashboardScreen() {
     setOthers(snap.others);
     setStats(snap.managerStats);
     setStaffing(snap.staffingStats);
+    setPatrolCard(snap.patrolCard);
+    setPatrolSite(snap.patrolSite);
     setSelected(snap.primary);
   }, [actor, currentSite?.id]);
 
@@ -110,6 +115,19 @@ export default function DashboardScreen() {
           </Text>
         </QinCard>
       ) : null}
+      {patrolSite?.criticalWarning ? (
+        <QinCard style={{ marginBottom: spacing.md, borderColor: colors.danger, borderWidth: 1 }}>
+          <Text style={textStyle(colors, fontScale, 'md', { color: colors.danger, fontWeight: '800' })}>
+            {patrolSite.criticalWarning}
+          </Text>
+        </QinCard>
+      ) : patrolCard?.criticalWarning ? (
+        <QinCard style={{ marginBottom: spacing.md, borderColor: colors.danger, borderWidth: 1 }}>
+          <Text style={textStyle(colors, fontScale, 'md', { color: colors.danger, fontWeight: '800' })}>
+            {patrolCard.criticalWarning}
+          </Text>
+        </QinCard>
+      ) : null}
       <StatGrid>
         <StatCard label="目前案場" value={currentSite?.name ?? '—'} hint={currentSite?.address ?? '尚無資料'} />
         {stats ? (
@@ -142,8 +160,30 @@ export default function DashboardScreen() {
             hint={card?.shiftName ?? '尚無今日排班'}
           />
         )}
-        <StatCard label="巡邏完成率" value="—" hint="功能尚未啟用" />
-        <StatCard label="異常事件" value="—" hint="功能尚未啟用" />
+        {patrolSite ? (
+          <>
+            <StatCard
+              label="巡邏完成率"
+              value={`${patrolSite.completionRate}%`}
+              hint={`準時 ${patrolSite.onTime} · 逾時 ${patrolSite.late} · 漏巡 ${patrolSite.missed}`}
+            />
+            <StatCard label="漏巡數" value={String(patrolSite.missed)} hint={patrolSite.criticalWarning ?? '今日漏巡點數'} />
+            <StatCard label="逾時數" value={String(patrolSite.late)} hint="逾時補巡" />
+            <StatCard label="異常數" value={String(patrolSite.exceptions)} hint="巡邏異常回報" />
+          </>
+        ) : patrolCard?.task ? (
+          <StatCard
+            label="本班巡邏"
+            value={`${patrolCard.stats.completed} / ${patrolCard.stats.totalRequired}`}
+            hint={
+              patrolCard.nextPoint
+                ? `下一點：${patrolCard.nextPoint.pointNameSnapshot} ${patrolCard.nextPoint.windowLabel}`
+                : `完成率 ${patrolCard.stats.completionRate}%`
+            }
+          />
+        ) : (
+          <StatCard label="本班巡邏" value="—" hint="尚無巡邏任務" />
+        )}
         <StatCard label="督勤提醒" value="—" hint="功能尚未啟用" />
       </StatGrid>
       <SiteSwitcher

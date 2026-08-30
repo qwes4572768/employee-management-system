@@ -2,6 +2,7 @@ export type LocationFix = {
   latitude: number;
   longitude: number;
   accuracy?: number | null;
+  mocked?: boolean | null;
 };
 
 export type LocationErrorCode =
@@ -109,7 +110,12 @@ export async function createExpoLocationProvider(): Promise<LocationProvider> {
         }
         return {
           ok: true,
-          fix: { latitude, longitude, accuracy: pos.coords.accuracy },
+          fix: {
+            latitude,
+            longitude,
+            accuracy: pos.coords.accuracy,
+            mocked: 'mocked' in pos.coords ? Boolean((pos.coords as { mocked?: boolean }).mocked) : null,
+          },
         };
       } catch (error) {
         const text = error instanceof Error ? error.message : String(error);

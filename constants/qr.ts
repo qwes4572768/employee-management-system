@@ -16,7 +16,11 @@ export const QR_ASSET_TYPE_LABELS: Record<QrAssetType, string> = {
   key_item: '鑰匙 / 物品 QR',
 };
 
-export const QR_PHASE_COMPLETE_TYPES: QrAssetType[] = [QR_ASSET_TYPES.EMPLOYEE, QR_ASSET_TYPES.SITE];
+export const QR_PHASE_COMPLETE_TYPES: QrAssetType[] = [
+  QR_ASSET_TYPES.EMPLOYEE,
+  QR_ASSET_TYPES.SITE,
+  QR_ASSET_TYPES.PATROL_POINT,
+];
 
 export const QR_ASSET_STATUSES = {
   ACTIVE: 'active',
