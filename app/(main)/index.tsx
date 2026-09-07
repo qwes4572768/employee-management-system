@@ -13,7 +13,7 @@ import { GENDER_LABELS } from '@/constants/app';
 import { useSession } from '@/providers/SessionProvider';
 import { DUTY_STATUS_LABELS, getDashboardSnapshot, type DashboardStaffingStats, type OnDutyCard } from '@/services/dashboardService';
 import { INSPECTION_GRADE_LABELS } from '@/constants/inspection';
-import type { InspectionHomeCard, InspectionSiteDashboard, PatrolHomeCard, PatrolSiteDashboard } from '@/types';
+import type { CommunityHomeCard, InspectionHomeCard, InspectionSiteDashboard, PatrolHomeCard, PatrolSiteDashboard } from '@/types';
 import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
@@ -31,6 +31,7 @@ export default function DashboardScreen() {
   const [patrolSite, setPatrolSite] = useState<PatrolSiteDashboard | null>(null);
   const [inspectionCard, setInspectionCard] = useState<InspectionHomeCard | null>(null);
   const [inspectionSite, setInspectionSite] = useState<InspectionSiteDashboard | null>(null);
+  const [communityCard, setCommunityCard] = useState<CommunityHomeCard | null>(null);
   const [selected, setSelected] = useState<OnDutyCard | null>(null);
 
   const load = useCallback(async () => {
@@ -43,6 +44,7 @@ export default function DashboardScreen() {
     setPatrolSite(snap.patrolSite);
     setInspectionCard(snap.inspectionCard);
     setInspectionSite(snap.inspectionSite);
+    setCommunityCard(snap.communityCard);
     setSelected(snap.primary);
   }, [actor, currentSite?.id]);
 
@@ -209,6 +211,12 @@ export default function DashboardScreen() {
         ) : (
           <StatCard label="督勤提醒" value={inspectionCard ? String(inspectionCard.openImprovements) : '—'} hint={inspectionCard?.openImprovements ? '改善待辦' : '尚無督勤紀錄'} />
         )}
+        {communityCard ? (
+          <>
+            <StatCard label="在場訪客" value={String(communityCard.visitorsOnSite)} hint={`今日登記 ${communityCard.visitorsToday}`} />
+            <StatCard label="待領包裹" value={String(communityCard.parcelsWaiting)} hint={`今日到件 ${communityCard.parcelsToday}`} />
+          </>
+        ) : null}
       </StatGrid>
       <SiteSwitcher
         visible={switcher}

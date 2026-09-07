@@ -5,6 +5,7 @@ import { getSiteById } from '@/repositories/siteRepository';
 import { getShiftTemplateById, listSchedulesForSiteDate, listSchedulesForUserInRange } from '@/repositories/workforceRepository';
 import type {
   AttendanceRecord,
+  CommunityHomeCard,
   InspectionHomeCard,
   InspectionSiteDashboard,
   PatrolHomeCard,
@@ -24,6 +25,7 @@ import { refreshSickLeaveOverdue } from './leaveService';
 import { listSiteCoverages, summarizeCoverages } from './staffingRequirementService';
 import { getOwnActivePatrolCard } from './patrolTaskService';
 import { getManagerPatrolHomeStats } from './patrolDashboardService';
+import { getCommunityHomeCard } from './communityDashboardService';
 import { getInspectionHomeCard, getInspectionSiteDashboard } from './inspectionDashboardService';
 
 export type DutyStatus = 'not_arrived' | 'clocked_in' | 'on_duty' | 'duty_ended' | 'late' | 'exception';
@@ -134,6 +136,7 @@ export async function getDashboardSnapshot(
   patrolSite: PatrolSiteDashboard | null;
   inspectionCard: InspectionHomeCard | null;
   inspectionSite: InspectionSiteDashboard | null;
+  communityCard: CommunityHomeCard | null;
 }> {
   const tenantId = requireActorTenant(actor);
   const now = input.at ?? new Date();
@@ -152,6 +155,7 @@ export async function getDashboardSnapshot(
       patrolSite: null,
       inspectionCard: null,
       inspectionSite: null,
+      communityCard: null,
     };
   }
   const self = await getUserById(actor.userId, tenantId);
@@ -165,6 +169,7 @@ export async function getDashboardSnapshot(
       patrolSite: null,
       inspectionCard: null,
       inspectionSite: null,
+      communityCard: null,
     };
   }
 
@@ -259,5 +264,27 @@ export async function getDashboardSnapshot(
     }
   }
 
-  return { primary, others, managerStats, staffingStats, patrolCard, patrolSite, inspectionCard, inspectionSite };
+  let communityCard: CommunityHomeCard | null = null;
+  if (
+    site &&
+    (keys.includes('communityDashboard.view') || keys.includes('visitor.view') || keys.includes('parcel.view'))
+  ) {
+    try {
+      communityCard = await getCommunityHomeCard(actor, site.id, now);
+    } catch {
+      communityCard = null;
+    }
+  }
+
+  return {
+    primary,
+    others,
+    managerStats,
+    staffingStats,
+    patrolCard,
+    patrolSite,
+    inspectionCard,
+    inspectionSite,
+    communityCard,
+  };
 }

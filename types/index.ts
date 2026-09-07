@@ -63,6 +63,16 @@ export type {
   InspectionVerification,
 } from './inspection';
 export type {
+  CommunityHomeCard,
+  Parcel,
+  ParcelEvent,
+  Resident,
+  ResidentOccupancy,
+  SiteUnit,
+  VisitorMovement,
+  VisitorPass,
+} from './community';
+export type {
   AuditLog,
   AuditResult,
   AuthContextValue,

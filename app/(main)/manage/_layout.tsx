@@ -57,6 +57,16 @@ export default function ManageStack() {
       <Stack.Screen name="improvements/[id]" options={{ title: '改善審核明細' }} />
       <Stack.Screen name="discipline/index" options={{ title: '懲處審核' }} />
       <Stack.Screen name="discipline/[id]" options={{ title: '懲處審核明細' }} />
+      <Stack.Screen name="units/index" options={{ title: '戶別資料' }} />
+      <Stack.Screen name="units/new" options={{ title: '新增戶別' }} />
+      <Stack.Screen name="units/[id]" options={{ title: '戶別詳情' }} />
+      <Stack.Screen name="residents/index" options={{ title: '住戶名冊' }} />
+      <Stack.Screen name="residents/new" options={{ title: '新增住戶' }} />
+      <Stack.Screen name="residents/[id]" options={{ title: '住戶詳情' }} />
+      <Stack.Screen name="visitors/index" options={{ title: '訪客查詢' }} />
+      <Stack.Screen name="visitors/[id]" options={{ title: '訪客明細' }} />
+      <Stack.Screen name="parcels/index" options={{ title: '包裹中心' }} />
+      <Stack.Screen name="parcels/[id]" options={{ title: '包裹明細' }} />
     </Stack>
   );
 }

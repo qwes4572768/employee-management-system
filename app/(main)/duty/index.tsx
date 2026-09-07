@@ -76,6 +76,18 @@ export default function DutyHome() {
       {can('patrol.viewOwn') || can('patrol.execute') ? (
         <ListRow title="智慧巡邏" subtitle="本班巡邏進度、下一點與現場驗證" onPress={() => router.push('/(main)/duty/patrol')} />
       ) : null}
+      {can('visitor.register') ? (
+        <ListRow title="訪客登記" subtitle="訪客、廠商、外送與臨時人員" onPress={() => router.push('/(main)/duty/visitors/register')} />
+      ) : null}
+      {can('visitor.check') || can('visitor.view') ? (
+        <ListRow title="訪客進出" subtitle="進場、離場與在場名單" onPress={() => router.push('/(main)/duty/visitors')} />
+      ) : null}
+      {can('parcel.register') ? (
+        <ListRow title="包裹登記" subtitle="到件登記與存放位置" onPress={() => router.push('/(main)/duty/parcels/register')} />
+      ) : null}
+      {can('parcel.pickup') || can('parcel.view') ? (
+        <ListRow title="包裹領取" subtitle="簽收、照片與領取時間" onPress={() => router.push('/(main)/duty/parcels')} />
+      ) : null}
 
       <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm })}>
         本機通知

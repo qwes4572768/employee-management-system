@@ -401,6 +401,19 @@ export const EXTRA_PERMISSIONS = [
   { permKey: 'discipline.review', module: 'discipline', action: 'review', name: '審核懲處建議', description: '檢視待審懲處建議' },
   { permKey: 'discipline.approve', module: 'discipline', action: 'approve', name: '核決懲處', description: '核准、拒絕或退回懲處建議' },
   { permKey: 'inspectionDashboard.view', module: 'inspectionDashboard', action: 'view', name: '查看督勤戰情', description: '檢視案場督勤戰情' },
+  { permKey: 'unit.view', module: 'unit', action: 'view', name: '查看戶別', description: '檢視案場戶別資料' },
+  { permKey: 'unit.manage', module: 'unit', action: 'manage', name: '管理戶別', description: '新增或修改戶別' },
+  { permKey: 'resident.view', module: 'resident', action: 'view', name: '查看住戶', description: '檢視住戶與關係' },
+  { permKey: 'resident.manage', module: 'resident', action: 'manage', name: '管理住戶', description: '新增或修改住戶與所有人／租戶關係' },
+  { permKey: 'visitor.view', module: 'visitor', action: 'view', name: '查看訪客', description: '檢視訪客登記與進出' },
+  { permKey: 'visitor.register', module: 'visitor', action: 'register', name: '登記訪客', description: '登記訪客、廠商、外送或臨時人員' },
+  { permKey: 'visitor.check', module: 'visitor', action: 'check', name: '訪客進出', description: '辦理訪客進場或離場' },
+  { permKey: 'visitor.cancel', module: 'visitor', action: 'cancel', name: '取消訪客', description: '取消訪客登記' },
+  { permKey: 'parcel.view', module: 'parcel', action: 'view', name: '查看包裹', description: '檢視包裹登記與領取' },
+  { permKey: 'parcel.register', module: 'parcel', action: 'register', name: '登記包裹', description: '登記到件包裹' },
+  { permKey: 'parcel.pickup', module: 'parcel', action: 'pickup', name: '包裹領取', description: '辦理包裹領取簽收' },
+  { permKey: 'parcel.manage', module: 'parcel', action: 'manage', name: '管理包裹', description: '退件或取消包裹' },
+  { permKey: 'communityDashboard.view', module: 'communityDashboard', action: 'view', name: '查看社區戰情', description: '檢視訪客在場與待領包裹' },
 ] as const;
 
 export function permissionKey(module: string, action: string): string {
@@ -538,6 +551,19 @@ export const MANAGER_DEFAULT_PERMISSIONS = [
   'discipline.review',
   'discipline.approve',
   'inspectionDashboard.view',
+  'unit.view',
+  'unit.manage',
+  'resident.view',
+  'resident.manage',
+  'visitor.view',
+  'visitor.register',
+  'visitor.check',
+  'visitor.cancel',
+  'parcel.view',
+  'parcel.register',
+  'parcel.pickup',
+  'parcel.manage',
+  'communityDashboard.view',
 ] as const;
 
 export const STAFF_DEFAULT_PERMISSIONS = [
@@ -562,4 +588,12 @@ export const STAFF_DEFAULT_PERMISSIONS = [
   'patrolException.create',
   'inspection.viewOwn',
   'improvement.view',
+  'unit.view',
+  'resident.view',
+  'visitor.view',
+  'visitor.register',
+  'visitor.check',
+  'parcel.view',
+  'parcel.register',
+  'parcel.pickup',
 ] as const;

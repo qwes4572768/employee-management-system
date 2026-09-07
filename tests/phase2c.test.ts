@@ -231,7 +231,7 @@ async function main() {
   const db = await openDb();
   const version = await migrate(db);
   assert(version === CURRENT_SCHEMA_VERSION, `fresh install expected ${CURRENT_SCHEMA_VERSION}, got ${version}`);
-  assert(CURRENT_SCHEMA_VERSION === 7, 'schema version must be 7');
+  assert(CURRENT_SCHEMA_VERSION === 8, 'schema version must be 8');
   assert(await isForeignKeysEnabled(db), 'FK must be on');
   const tables = await db.getAll<{ name: string }>(
     `SELECT name FROM sqlite_master WHERE type='table' AND name IN (
@@ -621,7 +621,7 @@ async function main() {
     [new Date().toISOString(), new Date().toISOString()],
   );
   const upgraded = await migrate(upgradeDb);
-  assert(upgraded === 7, `upgrade to 7 got ${upgraded}`);
+  assert(upgraded === CURRENT_SCHEMA_VERSION, `upgrade to ${CURRENT_SCHEMA_VERSION} got ${upgraded}`);
   const keepQr = await upgradeDb.getFirst<{ qr_code: string }>('SELECT qr_code FROM qr_assets WHERE id = ?', ['q-keep']);
   assert(keepQr?.qr_code === 'QINGUAN:v1:keep', 'qr kept after 006→007');
   const keepSite = await upgradeDb.getFirst<{ name: string }>('SELECT name FROM sites WHERE id = ?', ['s-keep']);

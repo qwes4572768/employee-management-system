@@ -25,6 +25,12 @@ export default function DutyLayout() {
       <Stack.Screen name="patrol/[taskId]" options={{ title: '巡邏任務' }} />
       <Stack.Screen name="patrol/check" options={{ title: '完成巡邏點' }} />
       <Stack.Screen name="patrol/exception" options={{ title: '發現異常' }} />
+      <Stack.Screen name="visitors/index" options={{ title: '訪客進出' }} />
+      <Stack.Screen name="visitors/register" options={{ title: '訪客登記' }} />
+      <Stack.Screen name="visitors/[id]" options={{ title: '訪客進出辦理' }} />
+      <Stack.Screen name="parcels/index" options={{ title: '包裹領取' }} />
+      <Stack.Screen name="parcels/register" options={{ title: '包裹登記' }} />
+      <Stack.Screen name="parcels/[id]" options={{ title: '包裹領取簽收' }} />
     </Stack>
   );
 }

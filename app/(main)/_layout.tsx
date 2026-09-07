@@ -24,7 +24,15 @@ export default function MainLayout() {
     can('inspectionDashboard.view') ||
     can('inspectionCriteria.view') ||
     can('improvement.review') ||
-    can('discipline.review');
+    can('discipline.review') ||
+    can('unit.view') ||
+    can('unit.manage') ||
+    can('resident.view') ||
+    can('resident.manage') ||
+    can('visitor.view') ||
+    can('parcel.view') ||
+    can('parcel.manage') ||
+    can('communityDashboard.view');
 
   if (!session || user?.status !== 'active') {
     return <Redirect href="/(auth)/login" />;

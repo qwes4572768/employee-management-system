@@ -77,6 +77,18 @@ export default function ManageHome() {
       {can('discipline.review') || can('discipline.approve') ? (
         <ListRow title="懲處審核" subtitle="核決懲處建議，不會直接扣薪" onPress={() => router.push('/(main)/manage/discipline')} />
       ) : null}
+      {can('unit.view') || can('unit.manage') ? (
+        <ListRow title="戶別資料" subtitle="棟別、樓層與戶號" onPress={() => router.push('/(main)/manage/units')} />
+      ) : null}
+      {can('resident.view') || can('resident.manage') ? (
+        <ListRow title="住戶名冊" subtitle="住戶資料與所有人／租戶關係" onPress={() => router.push('/(main)/manage/residents')} />
+      ) : null}
+      {can('visitor.view') ? (
+        <ListRow title="訪客查詢" subtitle="登記、進出與在場紀錄" onPress={() => router.push('/(main)/manage/visitors')} />
+      ) : null}
+      {can('parcel.view') || can('parcel.manage') ? (
+        <ListRow title="包裹中心" subtitle="到件、通知、領取與退件" onPress={() => router.push('/(main)/manage/parcels')} />
+      ) : null}
     </Screen>
   );
 }
