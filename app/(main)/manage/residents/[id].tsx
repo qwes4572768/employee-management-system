@@ -7,6 +7,7 @@ import { ErrorBanner } from '@/components/ui/Banners';
 import { ListRow } from '@/components/ui/ListRow';
 import { QinButton } from '@/components/ui/QinButton';
 import { QinCard } from '@/components/ui/QinCard';
+import { QinInput } from '@/components/ui/QinInput';
 import { QinSelect } from '@/components/ui/QinSelect';
 import { GENDER_LABELS } from '@/constants/app';
 import { RESIDENT_RELATION_LABELS, RESIDENT_STATUS_LABELS, type ResidentRelationKey } from '@/constants/community';
@@ -33,10 +34,12 @@ export default function ResidentDetailScreen() {
   const { actor, can, currentSite } = useSession();
   const { colors, fontScale } = useTheme();
   const [resident, setResident] = useState<Resident | null>(null);
-  const [occupancies, setOccupancies] = useState<ResidentOccupancy[]>([]);
+  const [currentRows, setCurrentRows] = useState<ResidentOccupancy[]>([]);
+  const [historyRows, setHistoryRows] = useState<ResidentOccupancy[]>([]);
   const [units, setUnits] = useState<SiteUnit[]>([]);
   const [unitId, setUnitId] = useState('');
-  const [relationKey, setRelationKey] = useState<ResidentRelationKey>('tenant');
+  const [relationKey, setRelationKey] = useState<ResidentRelationKey>('owner');
+  const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -44,10 +47,11 @@ export default function ResidentDetailScreen() {
     if (!id) return;
     const detail = await getResidentForActor(actor, id);
     setResident(detail.resident);
-    setOccupancies(detail.occupancies);
+    setCurrentRows(detail.current);
+    setHistoryRows(detail.history);
     const siteUnits = await listSiteUnitsForActor(actor, currentSite?.id ?? detail.resident.siteId);
     setUnits(siteUnits);
-    setUnitId((current) => current || detail.resident.unitId || siteUnits[0]?.id || '');
+    setUnitId((current) => current || siteUnits[0]?.id || '');
   }, [actor, currentSite?.id, id]);
 
   useFocusEffect(
@@ -55,6 +59,8 @@ export default function ResidentDetailScreen() {
       void load().catch((err) => setError(err instanceof Error ? err.message : '讀取失敗'));
     }, [load]),
   );
+
+  const unitName = (unitIdValue: string) => units.find((row) => row.id === unitIdValue)?.displayName ?? '戶別';
 
   return (
     <Screen>
@@ -80,13 +86,14 @@ export default function ResidentDetailScreen() {
             onChange={setUnitId}
           />
           <QinSelect label="關係" value={relationKey} options={RELATION_OPTIONS} onChange={setRelationKey} />
+          <QinInput label="原因（選填）" value={reason} onChangeText={setReason} />
           <QinButton
-            label="新增所有人／租戶關係"
+            label="新增戶別關係（不複製住戶）"
             loading={busy}
             onPress={() => {
               if (!id) return;
               setBusy(true);
-              void addResidentOccupancyForActor(actor, { residentId: id, unitId, relationKey })
+              void addResidentOccupancyForActor(actor, { residentId: id, unitId, relationKey, reason })
                 .then(() => load())
                 .catch((err) => setError(err instanceof Error ? err.message : '新增失敗'))
                 .finally(() => setBusy(false));
@@ -95,31 +102,47 @@ export default function ResidentDetailScreen() {
         </>
       ) : null}
       <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginTop: spacing.md, marginBottom: spacing.sm })}>
-        關係紀錄
+        目前關聯戶別
       </Text>
-      {occupancies.map((item) => {
-        const unit = units.find((row) => row.id === item.unitId);
-        return (
+      {currentRows.length === 0 ? (
+        <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textSubtle })}>目前沒有有效戶別關係</Text>
+      ) : (
+        currentRows.map((item) => (
           <ListRow
             key={item.id}
-            title={`${item.relationLabelSnapshot}${unit ? ` · ${unit.displayName}` : ''}`}
-            subtitle={item.isCurrent ? '目前有效' : `已結束 ${item.endsAt ? formatDateTimeZh(item.endsAt) : ''}`}
+            title={`${item.relationLabelSnapshot} · ${unitName(item.unitId)}`}
+            subtitle={item.isPrimary ? '此戶主要聯絡人' : '目前有效'}
             meta={item.startsAt ? formatDateTimeZh(item.startsAt) : undefined}
             onPress={
-              can('resident.manage') && item.isCurrent
+              can('resident.manage')
                 ? () => {
-                    void endResidentOccupancyForActor(actor, item.id)
+                    void endResidentOccupancyForActor(actor, item.id, { reason: reason || '結束戶別關係' })
                       .then(() => load())
                       .catch((err) => setError(err instanceof Error ? err.message : '結束失敗'));
                   }
                 : undefined
             }
           />
-        );
-      })}
+        ))
+      )}
+      <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginTop: spacing.md, marginBottom: spacing.sm })}>
+        歷史關聯戶別
+      </Text>
+      {historyRows.length === 0 ? (
+        <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textSubtle })}>尚無歷史關係</Text>
+      ) : (
+        historyRows.map((item) => (
+          <ListRow
+            key={item.id}
+            title={`${item.relationLabelSnapshot} · ${unitName(item.unitId)}`}
+            subtitle={`已結束 ${item.endsAt ? formatDateTimeZh(item.endsAt) : ''}`}
+            meta={item.startsAt ? formatDateTimeZh(item.startsAt) : undefined}
+          />
+        ))
+      )}
       {can('resident.manage') ? (
         <Text style={textStyle(colors, fontScale, 'xs', { color: colors.textSubtle, marginTop: spacing.sm })}>
-          點選目前有效的關係即可結束，歷史關係會保留。
+          點選目前有效的關係即可結束該戶，住戶主檔與其他戶別關係會保留。
         </Text>
       ) : null}
     </Screen>

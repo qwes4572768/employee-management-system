@@ -231,7 +231,7 @@ async function main() {
   const db = await openDb();
   const version = await migrate(db);
   assert(version === CURRENT_SCHEMA_VERSION, `fresh install expected ${CURRENT_SCHEMA_VERSION}, got ${version}`);
-  assert(CURRENT_SCHEMA_VERSION === 8, 'schema version must be 8');
+  assert(CURRENT_SCHEMA_VERSION === 9, 'schema version must be 9');
   assert(await isForeignKeysEnabled(db), 'FK must be on');
   const tables = await db.getAll<{ name: string }>(
     `SELECT name FROM sqlite_master WHERE type='table' AND name IN (

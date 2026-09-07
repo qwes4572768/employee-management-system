@@ -6,9 +6,10 @@ import { Screen } from '@/components/layout/Screen';
 import { ErrorBanner } from '@/components/ui/Banners';
 import { QinButton } from '@/components/ui/QinButton';
 import { QinCard } from '@/components/ui/QinCard';
+import { QinInput } from '@/components/ui/QinInput';
 import { PARCEL_KIND_LABELS, PARCEL_STATUS_LABELS } from '@/constants/community';
 import { useSession } from '@/providers/SessionProvider';
-import { cancelParcel, getParcelForActor, notifyParcel, returnParcel } from '@/services/parcelService';
+import { cancelParcel, getParcelForActor, notifyParcel, returnParcel, reverseParcelEvent } from '@/services/parcelService';
 import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
@@ -21,6 +22,7 @@ export default function ManageParcelDetailScreen() {
   const { colors, fontScale } = useTheme();
   const [parcel, setParcel] = useState<Parcel | null>(null);
   const [events, setEvents] = useState<ParcelEvent[]>([]);
+  const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -98,6 +100,27 @@ export default function ManageParcelDetailScreen() {
           }}
         />
       ) : null}
+      {can('parcel.manage') && parcel && (parcel.status === 'picked_up' || parcel.status === 'returned' || parcel.status === 'cancelled') ? (
+        <>
+          <QinInput label="更正原因" value={reason} onChangeText={setReason} />
+          <QinButton
+            label="更正狀態（保留原事件）"
+            variant="secondary"
+            loading={busy}
+            onPress={() => {
+              if (!id) return;
+              setBusy(true);
+              void reverseParcelEvent(actor, id, { reason })
+                .then(() => {
+                  setReason('');
+                  return load();
+                })
+                .catch((err) => setError(err instanceof Error ? err.message : '更正失敗'))
+                .finally(() => setBusy(false));
+            }}
+          />
+        </>
+      ) : null}
       <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginTop: spacing.md, marginBottom: spacing.sm })}>
         事件紀錄
       </Text>
@@ -109,6 +132,7 @@ export default function ManageParcelDetailScreen() {
           <Text style={textStyle(colors, fontScale, 'xs', { color: colors.accent, marginTop: 4 })}>
             {formatDateTimeZh(item.createdAt)}
           </Text>
+          {item.reason ? <Text style={textStyle(colors, fontScale, 'sm', { marginTop: 6 })}>原因 {item.reason}</Text> : null}
           {item.note ? <Text style={textStyle(colors, fontScale, 'sm', { marginTop: 6 })}>{item.note}</Text> : null}
         </QinCard>
       ))}

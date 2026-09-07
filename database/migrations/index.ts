@@ -6,8 +6,9 @@ import { migration005 } from './005_qr_asset_center';
 import { migration006 } from './006_smart_patrol';
 import { migration007 } from './007_inspection_evaluation';
 import { migration008 } from './008_community_center';
+import { migration009 } from './009_resident_master_normalization';
 
-export const CURRENT_SCHEMA_VERSION = 8;
+export const CURRENT_SCHEMA_VERSION = 9;
 
 export const migrations = [
   migration001,
@@ -18,6 +19,7 @@ export const migrations = [
   migration006,
   migration007,
   migration008,
+  migration009,
 ];
 
 export { permissionIdForKey, MIGRATION_001_SQL, type Migration } from './001_initial';

@@ -6,6 +6,7 @@ import type {
   ResidentStatus,
   UnitStatus,
   VisitorKind,
+  VisitorMovementEventKind,
   VisitorPassStatus,
 } from '@/constants/community';
 import type { SyncMeta } from './models';
@@ -27,13 +28,11 @@ export interface Resident extends SyncMeta {
   id: string;
   tenantId: string;
   siteId: string;
-  unitId: string;
   fullName: string;
   phone: string | null;
   gender: string;
   idLast4: string | null;
   photoUri: string | null;
-  isPrimary: boolean;
   moveInAt: string | null;
   moveOutAt: string | null;
   status: ResidentStatus;
@@ -51,6 +50,7 @@ export interface ResidentOccupancy extends SyncMeta {
   startsAt: string | null;
   endsAt: string | null;
   isCurrent: boolean;
+  isPrimary: boolean;
   notes: string | null;
 }
 
@@ -90,6 +90,9 @@ export interface VisitorMovement extends SyncMeta {
   note: string | null;
   latitude: number | null;
   longitude: number | null;
+  eventKind: VisitorMovementEventKind;
+  correctsId: string | null;
+  reason: string | null;
 }
 
 export interface Parcel extends SyncMeta {
@@ -127,6 +130,8 @@ export interface ParcelEvent extends SyncMeta {
   actorNameSnapshot: string;
   note: string | null;
   photoUri: string | null;
+  correctsEventId: string | null;
+  reason: string | null;
 }
 
 export interface CommunityHomeCard {

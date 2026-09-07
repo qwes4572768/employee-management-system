@@ -19,7 +19,7 @@ import { required } from '@/utils/validation';
 import { requireActorPermission } from './access';
 import type { ActorContext } from './actor';
 import { writeAudit } from './auditService';
-import { requireCommunitySiteRecord, requireParcelInTenant, requireSiteUnitInTenant } from './communityAccess';
+import { requireCommunitySiteRecord, requireCurrentOccupancy, requireParcelInTenant, requireSiteUnitInTenant } from './communityAccess';
 import { requireActorSiteAccess } from './patrolAccess';
 import { requireActorTenant, requireSiteInTenant } from './tenantGuard';
 
@@ -49,6 +49,12 @@ export async function registerParcel(
     const resident = await getResidentById(input.residentId, tenantId);
     if (!resident) throw new Error('找不到收件住戶');
     if (resident.siteId !== unit.siteId) throw new Error('收件住戶必須屬於同一案場');
+    await requireCurrentOccupancy(
+      tenantId,
+      resident.id,
+      unit.id,
+      '收件住戶在此戶別沒有有效關係，不能掛到此戶包裹',
+    );
     recipient = recipient || resident.fullName;
   }
   if (!recipient) throw new Error('請輸入收件人姓名');
@@ -279,4 +285,61 @@ export async function getParcelForActor(
 
 export function parcelStatusLabel(status: ParcelStatus): string {
   return PARCEL_STATUS_LABELS[status];
+}
+
+export async function reverseParcelEvent(
+  actor: ActorContext,
+  parcelId: string,
+  input: { reason: string; restoreStatus?: ParcelStatus },
+): Promise<Parcel> {
+  const tenantId = requireActorTenant(actor);
+  await requireActorPermission(actor, 'parcel.manage');
+  const reason = input.reason.trim();
+  if (!reason) throw new Error('更正必須填寫原因');
+  const parcel = await requireCommunitySiteRecord(actor, await requireParcelInTenant(parcelId, tenantId));
+  const events = await listParcelEvents(tenantId, parcel.id);
+  const lastMutating = [...events].reverse().find((item) => item.action === 'pickup' || item.action === 'return' || item.action === 'cancel' || item.action === 'notify');
+  if (!lastMutating) throw new Error('沒有可更正的包裹事件');
+  const restoreStatus =
+    input.restoreStatus ??
+    (parcel.status === 'picked_up' || parcel.status === 'returned' || parcel.status === 'cancelled'
+      ? parcel.notifiedAt
+        ? 'notified'
+        : 'registered'
+      : parcel.status);
+  const patch: Parameters<typeof updateParcel>[2] = { status: restoreStatus };
+  if (parcel.status === 'picked_up') {
+    patch.pickupAt = null;
+    patch.pickupByName = null;
+    patch.pickupPhotoUri = null;
+    patch.pickupSignatureNote = null;
+    patch.pickedUpByStaffId = null;
+  }
+  const updated = await updateParcel(parcel.id, tenantId, patch);
+  await insertParcelEvent({
+    tenantId,
+    parcelId: parcel.id,
+    action: 'reversal',
+    actorUserId: actor.userId,
+    actorNameSnapshot: actor.fullName,
+    note: `更正 ${lastMutating.action}`,
+    correctsEventId: lastMutating.id,
+    reason,
+    createdBy: actor.userId,
+    deviceId: actor.deviceId,
+  });
+  const site = await requireSiteInTenant(parcel.siteId, tenantId);
+  await writeAudit({
+    actor,
+    action: 'event.reverse',
+    module: 'parcel',
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 在「${site.name}」更正戶別「${parcel.unitLabelSnapshot}」包裹「${parcel.recipientNameSnapshot}」狀態，原因：${reason}。`,
+    targetType: 'parcel',
+    targetId: parcel.id,
+    targetDisplayName: parcel.recipientNameSnapshot,
+    before: parcel,
+    after: updated,
+    siteId: site.id,
+  });
+  return updated;
 }

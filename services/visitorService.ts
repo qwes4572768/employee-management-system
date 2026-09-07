@@ -6,6 +6,7 @@ import {
 } from '@/constants/community';
 import { getResidentById } from '@/repositories/residentRepository';
 import {
+  getVisitorMovementById,
   insertVisitorMovement,
   insertVisitorPass,
   listVisitorMovements,
@@ -19,7 +20,7 @@ import { required } from '@/utils/validation';
 import { requireActorPermission } from './access';
 import type { ActorContext } from './actor';
 import { writeAudit } from './auditService';
-import { requireCommunitySiteRecord, requireSiteUnitInTenant, requireVisitorPassInTenant } from './communityAccess';
+import { requireCommunitySiteRecord, requireCurrentOccupancy, requireSiteUnitInTenant, requireVisitorPassInTenant } from './communityAccess';
 import { requireActorSiteAccess } from './patrolAccess';
 import { requireActorTenant, requireSiteInTenant } from './tenantGuard';
 
@@ -69,6 +70,12 @@ export async function registerVisitorPass(
     const host = await getResidentById(input.hostResidentId, tenantId);
     if (!host) throw new Error('找不到受訪住戶');
     if (host.siteId !== unit.siteId) throw new Error('受訪住戶必須屬於同一案場');
+    await requireCurrentOccupancy(
+      tenantId,
+      host.id,
+      unit.id,
+      '受訪住戶在此戶別沒有有效關係，不能作為此戶訪客 Host',
+    );
     hostName = host.fullName;
   }
   const deviceTime = input.deviceTime ?? nowIso();
@@ -266,4 +273,123 @@ export async function getVisitorPassForActor(
 
 export function visitorStatusLabel(status: VisitorPassStatus): string {
   return VISITOR_PASS_STATUS_LABELS[status];
+}
+
+function voidedIds(movements: VisitorMovement[]): Set<string> {
+  return new Set(movements.filter((item) => item.eventKind === 'void' && item.correctsId).map((item) => item.correctsId as string));
+}
+
+async function refreshVisitorPassFromHistory(tenantId: string, passId: string): Promise<VisitorPass> {
+  const movements = await listVisitorMovements(tenantId, passId);
+  const voided = voidedIds(movements);
+  const effective = movements.filter((item) => item.eventKind === 'movement' && !voided.has(item.id));
+  const last = effective[effective.length - 1];
+  if (!last) {
+    return updateVisitorPass(passId, tenantId, { status: 'registered', checkedInAt: null, checkedOutAt: null });
+  }
+  if (last.direction === 'in') {
+    const correction = [...movements]
+      .reverse()
+      .find((item) => item.eventKind === 'correction' && item.correctsId === last.id);
+    return updateVisitorPass(passId, tenantId, {
+      status: 'checked_in',
+      checkedInAt: correction?.occurredAt ?? last.occurredAt,
+      checkedOutAt: null,
+    });
+  }
+  return updateVisitorPass(passId, tenantId, { status: 'checked_out', checkedOutAt: last.occurredAt });
+}
+
+export async function correctVisitorMovement(
+  actor: ActorContext,
+  movementId: string,
+  input: { occurredAt: string; reason: string },
+): Promise<{ pass: VisitorPass; movement: VisitorMovement }> {
+  const tenantId = requireActorTenant(actor);
+  await requireActorPermission(actor, 'visitor.cancel');
+  const reason = input.reason.trim();
+  if (!reason) throw new Error('更正必須填寫原因');
+  const original = await getVisitorMovementById(movementId, tenantId);
+  if (!original) {
+    const other = await getVisitorMovementById(movementId);
+    if (other) throw new Error('無權存取其他公司的資料');
+    throw new Error('找不到進出紀錄');
+  }
+  const pass = await requirePassForSite(actor, original.visitorPassId);
+  if (original.eventKind !== 'movement') throw new Error('只能更正原始進出紀錄');
+  const movement = await insertVisitorMovement({
+    tenantId,
+    siteId: pass.siteId,
+    visitorPassId: pass.id,
+    direction: original.direction,
+    occurredAt: input.occurredAt,
+    processedBy: actor.userId,
+    eventKind: 'correction',
+    correctsId: original.id,
+    reason,
+    createdBy: actor.userId,
+    deviceId: actor.deviceId,
+  });
+  const updated = await refreshVisitorPassFromHistory(tenantId, pass.id);
+  const site = await requireSiteInTenant(pass.siteId, tenantId);
+  await writeAudit({
+    actor,
+    action: 'movement.correct',
+    module: 'visitor',
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 在「${site.name}」更正訪客「${pass.visitorName}」於戶別「${pass.unitLabelSnapshot}」的進出時間，原因：${reason}。`,
+    targetType: 'visitor_movement',
+    targetId: original.id,
+    targetDisplayName: pass.visitorName,
+    after: { original, movement },
+    siteId: site.id,
+  });
+  return { pass: updated, movement };
+}
+
+export async function voidVisitorMovement(
+  actor: ActorContext,
+  movementId: string,
+  reason: string,
+): Promise<{ pass: VisitorPass; movement: VisitorMovement }> {
+  const tenantId = requireActorTenant(actor);
+  await requireActorPermission(actor, 'visitor.cancel');
+  const trimmed = reason.trim();
+  if (!trimmed) throw new Error('作廢必須填寫原因');
+  const original = await getVisitorMovementById(movementId, tenantId);
+  if (!original) {
+    const other = await getVisitorMovementById(movementId);
+    if (other) throw new Error('無權存取其他公司的資料');
+    throw new Error('找不到進出紀錄');
+  }
+  const pass = await requirePassForSite(actor, original.visitorPassId);
+  if (original.eventKind !== 'movement') throw new Error('只能作廢原始進出紀錄');
+  const existing = await listVisitorMovements(tenantId, pass.id);
+  if (voidedIds(existing).has(original.id)) throw new Error('此進出紀錄已作廢');
+  const movement = await insertVisitorMovement({
+    tenantId,
+    siteId: pass.siteId,
+    visitorPassId: pass.id,
+    direction: original.direction,
+    occurredAt: nowIso(),
+    processedBy: actor.userId,
+    eventKind: 'void',
+    correctsId: original.id,
+    reason: trimmed,
+    createdBy: actor.userId,
+    deviceId: actor.deviceId,
+  });
+  const updated = await refreshVisitorPassFromHistory(tenantId, pass.id);
+  const site = await requireSiteInTenant(pass.siteId, tenantId);
+  await writeAudit({
+    actor,
+    action: 'movement.void',
+    module: 'visitor',
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 在「${site.name}」作廢訪客「${pass.visitorName}」於戶別「${pass.unitLabelSnapshot}」的進出紀錄，原因：${trimmed}。`,
+    targetType: 'visitor_movement',
+    targetId: original.id,
+    targetDisplayName: pass.visitorName,
+    after: { original, movement },
+    siteId: site.id,
+  });
+  return { pass: updated, movement };
 }

@@ -142,6 +142,15 @@ export const PHASE3A_PERMISSION_KEYS = [
   'communityDashboard.view',
 ] as const;
 
+export const VISITOR_MOVEMENT_EVENT_KINDS = ['movement', 'correction', 'void'] as const;
+export type VisitorMovementEventKind = (typeof VISITOR_MOVEMENT_EVENT_KINDS)[number];
+
+export const VISITOR_MOVEMENT_EVENT_LABELS: Record<VisitorMovementEventKind, string> = {
+  movement: '進出',
+  correction: '更正',
+  void: '作廢',
+};
+
 export const PHASE3A_STAFF_PERMISSION_KEYS = [
   'unit.view',
   'resident.view',

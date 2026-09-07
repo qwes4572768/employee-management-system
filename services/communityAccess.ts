@@ -1,5 +1,5 @@
 import { getParcelById } from '@/repositories/parcelRepository';
-import { getResidentById, getResidentOccupancyById } from '@/repositories/residentRepository';
+import { getResidentById, getResidentOccupancyById, hasCurrentOccupancy } from '@/repositories/residentRepository';
 import { getSiteUnitById } from '@/repositories/unitRepository';
 import { getVisitorPassById } from '@/repositories/visitorRepository';
 import type { Parcel, Resident, ResidentOccupancy, SiteUnit, VisitorPass } from '@/types';
@@ -45,4 +45,14 @@ export async function requireCommunitySiteRecord<T extends { siteId: string }>(
   requireActorTenant(actor);
   await requireActorSiteAccess(actor, record.siteId);
   return record;
+}
+
+export async function requireCurrentOccupancy(
+  tenantId: string,
+  residentId: string,
+  unitId: string,
+  missing: string,
+): Promise<void> {
+  const ok = await hasCurrentOccupancy(tenantId, residentId, unitId);
+  if (!ok) throw new Error(missing);
 }

@@ -6,9 +6,10 @@ import { Screen } from '@/components/layout/Screen';
 import { ErrorBanner } from '@/components/ui/Banners';
 import { QinButton } from '@/components/ui/QinButton';
 import { QinCard } from '@/components/ui/QinCard';
-import { VISITOR_KIND_LABELS, VISITOR_PASS_STATUS_LABELS } from '@/constants/community';
+import { QinInput } from '@/components/ui/QinInput';
+import { VISITOR_KIND_LABELS, VISITOR_MOVEMENT_EVENT_LABELS, VISITOR_PASS_STATUS_LABELS } from '@/constants/community';
 import { useSession } from '@/providers/SessionProvider';
-import { cancelVisitorPass, getVisitorPassForActor } from '@/services/visitorService';
+import { cancelVisitorPass, getVisitorPassForActor, voidVisitorMovement } from '@/services/visitorService';
 import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
@@ -21,6 +22,7 @@ export default function ManageVisitorDetailScreen() {
   const { colors, fontScale } = useTheme();
   const [pass, setPass] = useState<VisitorPass | null>(null);
   const [movements, setMovements] = useState<VisitorMovement[]>([]);
+  const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -57,16 +59,37 @@ export default function ManageVisitorDetailScreen() {
           </Text>
         </QinCard>
       ) : null}
+      {can('visitor.cancel') ? <QinInput label="更正／作廢原因" value={reason} onChangeText={setReason} /> : null}
       {movements.map((item) => (
         <QinCard key={item.id} style={{ marginBottom: spacing.sm }}>
           <Text style={textStyle(colors, fontScale, 'md', { fontWeight: '700' })}>
-            {item.direction === 'in' ? '進場' : '離場'} · {formatDateTimeZh(item.occurredAt)}
+            {VISITOR_MOVEMENT_EVENT_LABELS[item.eventKind]} · {item.direction === 'in' ? '進場' : '離場'} · {formatDateTimeZh(item.occurredAt)}
           </Text>
+          {item.reason ? (
+            <Text style={textStyle(colors, fontScale, 'sm', { marginTop: 4 })}>原因 {item.reason}</Text>
+          ) : null}
           {item.note ? (
             <Text style={textStyle(colors, fontScale, 'sm', { marginTop: 4 })}>{item.note}</Text>
           ) : null}
           {item.photoUri ? (
             <Image source={{ uri: item.photoUri }} style={{ width: '100%', height: 180, borderRadius: 12, marginTop: 8 }} />
+          ) : null}
+          {can('visitor.cancel') && item.eventKind === 'movement' ? (
+            <QinButton
+              label="作廢此筆進出（保留原紀錄）"
+              variant="secondary"
+              loading={busy}
+              onPress={() => {
+                setBusy(true);
+                void voidVisitorMovement(actor, item.id, reason)
+                  .then(() => {
+                    setReason('');
+                    return load();
+                  })
+                  .catch((err) => setError(err instanceof Error ? err.message : '作廢失敗'))
+                  .finally(() => setBusy(false));
+              }}
+            />
           ) : null}
         </QinCard>
       ))}

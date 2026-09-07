@@ -1,4 +1,5 @@
 import { RESIDENT_RELATION_LABELS, type ResidentRelationKey, type ResidentStatus } from '@/constants/community';
+import { getDatabase } from '@/database/runtime';
 import {
   endResidentOccupancy,
   getResidentById,
@@ -33,6 +34,30 @@ function assertIdLast4(value?: string | null): string | null {
   return trimmed;
 }
 
+async function syncResidentStatusFromOccupancy(
+  tenantId: string,
+  residentId: string,
+  endedAt?: string,
+): Promise<Resident> {
+  const occupancies = await listResidentOccupancies(tenantId, { residentId });
+  const current = occupancies.filter((item) => item.isCurrent);
+  if (current.length > 0) {
+    const earliest = current
+      .map((item) => item.startsAt)
+      .filter((item): item is string => Boolean(item))
+      .sort()[0];
+    return updateResident(residentId, tenantId, {
+      status: 'active',
+      moveOutAt: null,
+      moveInAt: earliest,
+    });
+  }
+  return updateResident(residentId, tenantId, {
+    status: 'moved_out',
+    moveOutAt: endedAt ?? nowIso(),
+  });
+}
+
 export async function createResidentWithOccupancy(
   actor: ActorContext,
   input: {
@@ -56,46 +81,48 @@ export async function createResidentWithOccupancy(
   const nameError = required(input.fullName, '住戶姓名');
   if (nameError) throw new Error(nameError);
   const site = await requireSiteInTenant(unit.siteId, tenantId);
-  const resident = await insertResident({
-    tenantId,
-    siteId: unit.siteId,
-    unitId: unit.id,
-    fullName: input.fullName.trim(),
-    phone: input.phone?.trim() || null,
-    gender: input.gender?.trim() || 'unspecified',
-    idLast4: assertIdLast4(input.idLast4),
-    photoUri: input.photoUri ?? null,
-    isPrimary: input.isPrimary ?? false,
-    moveInAt: input.moveInAt ?? nowIso(),
-    notes: input.notes?.trim() || null,
-    createdBy: actor.userId,
-    deviceId: actor.deviceId,
+  const startedAt = input.moveInAt ?? nowIso();
+  return getDatabase().withTransaction(async () => {
+    const resident = await insertResident({
+      tenantId,
+      siteId: unit.siteId,
+      fullName: input.fullName.trim(),
+      phone: input.phone?.trim() || null,
+      gender: input.gender?.trim() || 'unspecified',
+      idLast4: assertIdLast4(input.idLast4),
+      photoUri: input.photoUri ?? null,
+      moveInAt: startedAt,
+      notes: input.notes?.trim() || null,
+      createdBy: actor.userId,
+      deviceId: actor.deviceId,
+    });
+    const occupancy = await insertResidentOccupancy({
+      tenantId,
+      siteId: unit.siteId,
+      unitId: unit.id,
+      residentId: resident.id,
+      relationKey: input.relationKey,
+      relationLabelSnapshot: RESIDENT_RELATION_LABELS[input.relationKey],
+      startsAt: startedAt,
+      isCurrent: true,
+      isPrimary: input.isPrimary ?? false,
+      notes: input.occupancyNotes?.trim() || null,
+      createdBy: actor.userId,
+      deviceId: actor.deviceId,
+    });
+    await writeAudit({
+      actor,
+      action: 'create',
+      module: 'resident',
+      description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 在「${site.name}」建立住戶主檔「${resident.fullName}」，並於戶別「${unit.displayName}」建立${RESIDENT_RELATION_LABELS[input.relationKey]}關係。`,
+      targetType: 'resident',
+      targetId: resident.id,
+      targetDisplayName: resident.fullName,
+      after: { resident, occupancy },
+      siteId: site.id,
+    });
+    return { resident, occupancy };
   });
-  const occupancy = await insertResidentOccupancy({
-    tenantId,
-    siteId: unit.siteId,
-    unitId: unit.id,
-    residentId: resident.id,
-    relationKey: input.relationKey,
-    relationLabelSnapshot: RESIDENT_RELATION_LABELS[input.relationKey],
-    startsAt: resident.moveInAt,
-    isCurrent: true,
-    notes: input.occupancyNotes?.trim() || null,
-    createdBy: actor.userId,
-    deviceId: actor.deviceId,
-  });
-  await writeAudit({
-    actor,
-    action: 'create',
-    module: 'resident',
-    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 在「${site.name}」為戶別「${unit.displayName}」建立住戶「${resident.fullName}」，關係為${RESIDENT_RELATION_LABELS[input.relationKey]}。`,
-    targetType: 'resident',
-    targetId: resident.id,
-    targetDisplayName: resident.fullName,
-    after: { resident, occupancy },
-    siteId: site.id,
-  });
-  return { resident, occupancy };
 }
 
 export async function addResidentOccupancyForActor(
@@ -106,6 +133,8 @@ export async function addResidentOccupancyForActor(
     relationKey: ResidentRelationKey;
     startsAt?: string | null;
     notes?: string | null;
+    isPrimary?: boolean;
+    reason?: string | null;
   },
 ): Promise<ResidentOccupancy> {
   const tenantId = requireActorTenant(actor);
@@ -134,16 +163,19 @@ export async function addResidentOccupancyForActor(
     relationLabelSnapshot: RESIDENT_RELATION_LABELS[input.relationKey],
     startsAt: input.startsAt ?? nowIso(),
     isCurrent: true,
+    isPrimary: input.isPrimary ?? false,
     notes: input.notes?.trim() || null,
     createdBy: actor.userId,
     deviceId: actor.deviceId,
   });
+  await syncResidentStatusFromOccupancy(tenantId, resident.id);
   const site = await requireSiteInTenant(unit.siteId, tenantId);
+  const reason = input.reason?.trim();
   await writeAudit({
     actor,
     action: 'occupancy.add',
     module: 'resident',
-    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 在「${site.name}」為住戶「${resident.fullName}」新增「${unit.displayName}」${RESIDENT_RELATION_LABELS[input.relationKey]}關係。`,
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 在「${site.name}」為住戶「${resident.fullName}」新增戶別「${unit.displayName}」${RESIDENT_RELATION_LABELS[input.relationKey]}關係${reason ? `，原因：${reason}` : ''}。`,
     targetType: 'resident_occupancy',
     targetId: occupancy.id,
     targetDisplayName: `${resident.fullName}／${unit.displayName}`,
@@ -156,7 +188,7 @@ export async function addResidentOccupancyForActor(
 export async function endResidentOccupancyForActor(
   actor: ActorContext,
   occupancyId: string,
-  endsAt?: string,
+  input?: { endsAt?: string; reason?: string | null },
 ): Promise<ResidentOccupancy> {
   const tenantId = requireActorTenant(actor);
   await requireActorPermission(actor, 'resident.manage');
@@ -165,15 +197,19 @@ export async function endResidentOccupancyForActor(
   if (!occupancy.isCurrent) {
     throw new Error('此關係已結束');
   }
-  const endedAt = endsAt ?? nowIso();
+  const endedAt = input?.endsAt ?? nowIso();
+  const reason = input?.reason?.trim() || '結束戶別關係';
   await endResidentOccupancy(occupancy.id, tenantId, endedAt);
+  await syncResidentStatusFromOccupancy(tenantId, occupancy.residentId, endedAt);
   const next = await requireOccupancyInTenant(occupancy.id, tenantId);
   const site = await requireSiteInTenant(occupancy.siteId, tenantId);
+  const unit = await requireSiteUnitInTenant(occupancy.unitId, tenantId);
+  const resident = await getResidentById(occupancy.residentId, tenantId);
   await writeAudit({
     actor,
     action: 'occupancy.end',
     module: 'resident',
-    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 在「${site.name}」結束一筆${occupancy.relationLabelSnapshot}關係。`,
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 在「${site.name}」結束住戶「${resident?.fullName ?? '住戶'}」與戶別「${unit.displayName}」的${occupancy.relationLabelSnapshot}關係，原因：${reason}。`,
     targetType: 'resident_occupancy',
     targetId: occupancy.id,
     before: occupancy,
@@ -196,7 +232,12 @@ export async function listResidentsForActor(
     const unit = await requireSiteUnitInTenant(input.unitId, tenantId);
     await requireActorSiteAccess(actor, unit.siteId);
   }
-  const rows = await listResidents(tenantId, input);
+  const rows = await listResidents(tenantId, {
+    siteId: input?.siteId,
+    unitId: input?.unitId,
+    status: input?.status,
+    currentOccupancyOnly: Boolean(input?.unitId),
+  });
   const visible: Resident[] = [];
   for (const row of rows) {
     try {
@@ -212,12 +253,17 @@ export async function listResidentsForActor(
 export async function getResidentForActor(
   actor: ActorContext,
   residentId: string,
-): Promise<{ resident: Resident; occupancies: ResidentOccupancy[] }> {
+): Promise<{ resident: Resident; occupancies: ResidentOccupancy[]; current: ResidentOccupancy[]; history: ResidentOccupancy[] }> {
   const tenantId = requireActorTenant(actor);
   await requireActorPermission(actor, 'resident.view');
   const resident = await requireCommunitySiteRecord(actor, await requireResidentInTenant(residentId, tenantId));
   const occupancies = await listResidentOccupancies(tenantId, { residentId: resident.id });
-  return { resident, occupancies };
+  return {
+    resident,
+    occupancies,
+    current: occupancies.filter((item) => item.isCurrent),
+    history: occupancies.filter((item) => !item.isCurrent),
+  };
 }
 
 export async function listUnitOccupanciesForActor(
@@ -240,7 +286,7 @@ export async function listUnitOccupanciesForActor(
 export async function updateResidentForActor(
   actor: ActorContext,
   residentId: string,
-  patch: Partial<Pick<Resident, 'fullName' | 'phone' | 'gender' | 'idLast4' | 'photoUri' | 'isPrimary' | 'status' | 'notes'>>,
+  patch: Partial<Pick<Resident, 'fullName' | 'phone' | 'gender' | 'idLast4' | 'photoUri' | 'status' | 'notes'>>,
 ): Promise<Resident> {
   const tenantId = requireActorTenant(actor);
   await requireActorPermission(actor, 'resident.manage');
@@ -255,7 +301,7 @@ export async function updateResidentForActor(
     actor,
     action: 'update',
     module: 'resident',
-    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 在「${site.name}」更新住戶「${updated.fullName}」。`,
+    description: `${actor.fullName} 於 ${formatDateTimeZh(nowIso())} 在「${site.name}」更新住戶主檔「${updated.fullName}」。`,
     targetType: 'resident',
     targetId: updated.id,
     targetDisplayName: updated.fullName,

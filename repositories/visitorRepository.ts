@@ -42,6 +42,9 @@ interface MovementRow extends SyncRow {
   note: string | null;
   latitude: number | null;
   longitude: number | null;
+  event_kind: 'movement' | 'correction' | 'void';
+  corrects_id: string | null;
+  reason: string | null;
 }
 
 function mapPass(row: PassRow): VisitorPass {
@@ -84,6 +87,9 @@ function mapMovement(row: MovementRow): VisitorMovement {
     note: row.note,
     latitude: row.latitude,
     longitude: row.longitude,
+    eventKind: row.event_kind ?? 'movement',
+    correctsId: row.corrects_id ?? null,
+    reason: row.reason ?? null,
     ...mapSync(row),
   };
 }
@@ -208,6 +214,9 @@ export async function insertVisitorMovement(input: {
   note?: string | null;
   latitude?: number | null;
   longitude?: number | null;
+  eventKind?: 'movement' | 'correction' | 'void';
+  correctsId?: string | null;
+  reason?: string | null;
   createdBy: string | null;
   deviceId: string | null;
 }): Promise<VisitorMovement> {
@@ -216,8 +225,9 @@ export async function insertVisitorMovement(input: {
   await getDatabase().run(
     `INSERT INTO visitor_movements (
       id, tenant_id, site_id, visitor_pass_id, direction, occurred_at, processed_by, photo_uri, note, latitude, longitude,
+      event_kind, corrects_id, reason,
       created_by, created_at, updated_at, deleted_at, version, sync_status, device_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 1, 'local', ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 1, 'local', ?)`,
     [
       id,
       input.tenantId,
@@ -230,6 +240,9 @@ export async function insertVisitorMovement(input: {
       input.note ?? null,
       input.latitude ?? null,
       input.longitude ?? null,
+      input.eventKind ?? 'movement',
+      input.correctsId ?? null,
+      input.reason ?? null,
       input.createdBy,
       ts,
       ts,
@@ -246,8 +259,18 @@ export async function insertVisitorMovement(input: {
 
 export async function listVisitorMovements(tenantId: string, visitorPassId: string): Promise<VisitorMovement[]> {
   const rows = await getDatabase().getAll<MovementRow>(
-    `SELECT * FROM visitor_movements WHERE tenant_id = ? AND visitor_pass_id = ? AND deleted_at IS NULL ORDER BY occurred_at ASC`,
+    `SELECT * FROM visitor_movements WHERE tenant_id = ? AND visitor_pass_id = ? AND deleted_at IS NULL ORDER BY created_at ASC, occurred_at ASC`,
     [tenantId, visitorPassId],
   );
   return rows.map(mapMovement);
+}
+
+export async function getVisitorMovementById(id: string, tenantId?: string | null): Promise<VisitorMovement | null> {
+  const row = tenantId
+    ? await getDatabase().getFirst<MovementRow>(
+        'SELECT * FROM visitor_movements WHERE id = ? AND tenant_id = ?',
+        [id, tenantId],
+      )
+    : await getDatabase().getFirst<MovementRow>('SELECT * FROM visitor_movements WHERE id = ?', [id]);
+  return row ? mapMovement(row) : null;
 }

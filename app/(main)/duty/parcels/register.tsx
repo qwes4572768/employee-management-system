@@ -41,15 +41,22 @@ export default function DutyParcelRegisterScreen() {
       const siteUnits = await listSiteUnitsForActor(actor, currentSite?.id ?? null);
       setUnits(siteUnits);
       setUnitId((current) => current || siteUnits[0]?.id || '');
-      setResidents(await listResidentsForActor(actor, { siteId: currentSite?.id ?? null, status: 'active' }));
     })().catch((err) => setError(err instanceof Error ? err.message : '讀取失敗'));
   }, [actor, currentSite?.id]);
 
+  useEffect(() => {
+    if (!unitId) {
+      setResidents([]);
+      return;
+    }
+    void listResidentsForActor(actor, { unitId, status: 'active' })
+      .then(setResidents)
+      .catch((err) => setError(err instanceof Error ? err.message : '讀取住戶失敗'));
+  }, [actor, unitId]);
+
   const residentOptions = [
-    { value: '', label: '未指定住戶' },
-    ...residents
-      .filter((item) => !unitId || item.unitId === unitId)
-      .map((item) => ({ value: item.id, label: item.fullName })),
+    { value: '', label: '未指定住戶（僅用收件姓名）' },
+    ...residents.map((item) => ({ value: item.id, label: item.fullName })),
   ];
 
   return (

@@ -41,6 +41,8 @@ interface EventRow extends SyncRow {
   actor_name_snapshot: string;
   note: string | null;
   photo_uri: string | null;
+  corrects_event_id: string | null;
+  reason: string | null;
 }
 
 function mapParcel(row: ParcelRow): Parcel {
@@ -82,6 +84,8 @@ function mapEvent(row: EventRow): ParcelEvent {
     actorNameSnapshot: row.actor_name_snapshot,
     note: row.note,
     photoUri: row.photo_uri,
+    correctsEventId: row.corrects_event_id ?? null,
+    reason: row.reason ?? null,
     ...mapSync(row),
   };
 }
@@ -219,14 +223,16 @@ export async function insertParcelEvent(input: {
   photoUri?: string | null;
   createdBy: string | null;
   deviceId: string | null;
+  correctsEventId?: string | null;
+  reason?: string | null;
 }): Promise<ParcelEvent> {
   const id = createId();
   const ts = nowIso();
   await getDatabase().run(
     `INSERT INTO parcel_events (
-      id, tenant_id, parcel_id, action, actor_user_id, actor_name_snapshot, note, photo_uri,
+      id, tenant_id, parcel_id, action, actor_user_id, actor_name_snapshot, note, photo_uri, corrects_event_id, reason,
       created_by, created_at, updated_at, deleted_at, version, sync_status, device_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 1, 'local', ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 1, 'local', ?)`,
     [
       id,
       input.tenantId,
@@ -236,6 +242,8 @@ export async function insertParcelEvent(input: {
       input.actorNameSnapshot,
       input.note ?? null,
       input.photoUri ?? null,
+      input.correctsEventId ?? null,
+      input.reason ?? null,
       input.createdBy,
       ts,
       ts,

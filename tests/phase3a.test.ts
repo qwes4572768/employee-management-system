@@ -212,7 +212,7 @@ async function main() {
   const db = await openDb();
   const version = await migrate(db);
   assert(version === CURRENT_SCHEMA_VERSION, `fresh install expected ${CURRENT_SCHEMA_VERSION}, got ${version}`);
-  assert(CURRENT_SCHEMA_VERSION === 8, 'schema version must be 8');
+  assert(CURRENT_SCHEMA_VERSION === 9, 'schema version must be 9');
   assert(await isForeignKeysEnabled(db), 'FK must be on');
   const tables = await db.getAll<{ name: string }>(
     `SELECT name FROM sqlite_master WHERE type='table' AND name IN (
@@ -441,7 +441,7 @@ async function main() {
   const beforeVersion = await getSchemaVersion(upgradeDb);
   assert(beforeVersion === 7, `pre-upgrade version ${beforeVersion}`);
   const upgraded = await migrate(upgradeDb);
-  assert(upgraded === 8, `upgrade 007→008 got ${upgraded}`);
+  assert(upgraded === CURRENT_SCHEMA_VERSION, `upgrade 007→${CURRENT_SCHEMA_VERSION} got ${upgraded}`);
   const keepQr = await upgradeDb.getFirst<{ qr_code: string }>('SELECT qr_code FROM qr_assets WHERE id = ?', ['q-keep']);
   assert(keepQr?.qr_code === 'QINGUAN:v1:keep3a', 'qr kept after 007→008');
   const keepPoint = await upgradeDb.getFirst<{ name: string }>('SELECT name FROM patrol_points WHERE id = ?', ['pp-keep']);

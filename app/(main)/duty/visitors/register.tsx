@@ -39,16 +39,22 @@ export default function DutyVisitorRegisterScreen() {
       const siteUnits = await listSiteUnitsForActor(actor, currentSite?.id ?? null);
       setUnits(siteUnits);
       setUnitId((current) => current || siteUnits[0]?.id || '');
-      const people = await listResidentsForActor(actor, { siteId: currentSite?.id ?? null, status: 'active' });
-      setResidents(people);
     })().catch((err) => setError(err instanceof Error ? err.message : '讀取失敗'));
   }, [actor, currentSite?.id]);
 
+  useEffect(() => {
+    if (!unitId) {
+      setResidents([]);
+      return;
+    }
+    void listResidentsForActor(actor, { unitId, status: 'active' })
+      .then(setResidents)
+      .catch((err) => setError(err instanceof Error ? err.message : '讀取住戶失敗'));
+  }, [actor, unitId]);
+
   const hostOptions = [
     { value: '', label: '未指定受訪住戶' },
-    ...residents
-      .filter((item) => !unitId || item.unitId === unitId)
-      .map((item) => ({ value: item.id, label: item.fullName })),
+    ...residents.map((item) => ({ value: item.id, label: item.fullName })),
   ];
 
   return (

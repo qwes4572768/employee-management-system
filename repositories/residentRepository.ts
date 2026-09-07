@@ -11,13 +11,11 @@ interface ResidentRow extends SyncRow {
   id: string;
   tenant_id: string;
   site_id: string;
-  unit_id: string;
   full_name: string;
   phone: string | null;
   gender: string;
   id_last4: string | null;
   photo_uri: string | null;
-  is_primary: number;
   move_in_at: string | null;
   move_out_at: string | null;
   status: ResidentStatus;
@@ -35,6 +33,7 @@ interface OccupancyRow extends SyncRow {
   starts_at: string | null;
   ends_at: string | null;
   is_current: number;
+  is_primary?: number;
   notes: string | null;
 }
 
@@ -43,13 +42,11 @@ function mapResident(row: ResidentRow): Resident {
     id: row.id,
     tenantId: row.tenant_id,
     siteId: row.site_id,
-    unitId: row.unit_id,
     fullName: row.full_name,
     phone: row.phone,
     gender: row.gender,
     idLast4: row.id_last4,
     photoUri: row.photo_uri,
-    isPrimary: boolFromSql(row.is_primary),
     moveInAt: row.move_in_at,
     moveOutAt: row.move_out_at,
     status: row.status,
@@ -70,6 +67,7 @@ function mapOccupancy(row: OccupancyRow): ResidentOccupancy {
     startsAt: row.starts_at,
     endsAt: row.ends_at,
     isCurrent: boolFromSql(row.is_current),
+    isPrimary: boolFromSql(row.is_primary),
     notes: row.notes,
     ...mapSync(row),
   };
@@ -78,13 +76,11 @@ function mapOccupancy(row: OccupancyRow): ResidentOccupancy {
 export async function insertResident(input: {
   tenantId: string;
   siteId: string;
-  unitId: string;
   fullName: string;
   phone?: string | null;
   gender?: string;
   idLast4?: string | null;
   photoUri?: string | null;
-  isPrimary?: boolean;
   moveInAt?: string | null;
   notes?: string | null;
   createdBy: string | null;
@@ -94,20 +90,18 @@ export async function insertResident(input: {
   const ts = nowIso();
   await getDatabase().run(
     `INSERT INTO residents (
-      id, tenant_id, site_id, unit_id, full_name, phone, gender, id_last4, photo_uri, is_primary,
+      id, tenant_id, site_id, full_name, phone, gender, id_last4, photo_uri,
       move_in_at, move_out_at, status, notes, created_by, created_at, updated_at, deleted_at, version, sync_status, device_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'active', ?, ?, ?, ?, NULL, 1, 'local', ?)`,
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 'active', ?, ?, ?, ?, NULL, 1, 'local', ?)`,
     [
       id,
       input.tenantId,
       input.siteId,
-      input.unitId,
       input.fullName,
       input.phone ?? null,
       input.gender ?? 'unspecified',
       input.idLast4 ?? null,
       input.photoUri ?? null,
-      sqlBool(input.isPrimary ?? false),
       input.moveInAt ?? null,
       input.notes ?? null,
       input.createdBy,
@@ -133,44 +127,46 @@ export async function getResidentById(id: string, tenantId?: string | null): Pro
 
 export async function listResidents(
   tenantId: string,
-  input?: { siteId?: string | null; unitId?: string | null; status?: ResidentStatus | null },
+  input?: { siteId?: string | null; unitId?: string | null; status?: ResidentStatus | null; currentOccupancyOnly?: boolean },
 ): Promise<Resident[]> {
   const rows = await getDatabase().getAll<ResidentRow>(
     `SELECT * FROM residents WHERE tenant_id = ? AND deleted_at IS NULL ORDER BY full_name`,
     [tenantId],
   );
-  return rows
-    .map(mapResident)
-    .filter(
-      (item) =>
-        (!input?.siteId || item.siteId === input.siteId) &&
-        (!input?.unitId || item.unitId === input.unitId) &&
-        (!input?.status || item.status === input.status),
-    );
+  let items = rows.map(mapResident);
+  if (input?.siteId) items = items.filter((item) => item.siteId === input.siteId);
+  if (input?.status) items = items.filter((item) => item.status === input.status);
+  if (input?.unitId) {
+    const occupancies = await listResidentOccupancies(tenantId, {
+      unitId: input.unitId,
+      currentOnly: input.currentOccupancyOnly ?? true,
+    });
+    const ids = new Set(occupancies.map((item) => item.residentId));
+    items = items.filter((item) => ids.has(item.id));
+  }
+  return items;
 }
 
 export async function updateResident(
   id: string,
   tenantId: string,
-  patch: Partial<Pick<Resident, 'fullName' | 'phone' | 'gender' | 'idLast4' | 'photoUri' | 'isPrimary' | 'moveInAt' | 'moveOutAt' | 'status' | 'notes' | 'unitId'>>,
+  patch: Partial<Pick<Resident, 'fullName' | 'phone' | 'gender' | 'idLast4' | 'photoUri' | 'moveInAt' | 'moveOutAt' | 'status' | 'notes'>>,
 ): Promise<Resident> {
   const current = await getResidentById(id, tenantId);
   if (!current) throw new Error('找不到住戶');
   const ts = nowIso();
   await getDatabase().run(
     `UPDATE residents SET
-      unit_id = ?, full_name = ?, phone = ?, gender = ?, id_last4 = ?, photo_uri = ?, is_primary = ?,
+      full_name = ?, phone = ?, gender = ?, id_last4 = ?, photo_uri = ?,
       move_in_at = ?, move_out_at = ?, status = ?, notes = ?,
       updated_at = ?, version = version + 1, sync_status = 'pending'
      WHERE id = ? AND tenant_id = ?`,
     [
-      patch.unitId ?? current.unitId,
       patch.fullName ?? current.fullName,
       patch.phone === undefined ? current.phone : patch.phone,
       patch.gender ?? current.gender,
       patch.idLast4 === undefined ? current.idLast4 : patch.idLast4,
       patch.photoUri === undefined ? current.photoUri : patch.photoUri,
-      sqlBool(patch.isPrimary ?? current.isPrimary),
       patch.moveInAt === undefined ? current.moveInAt : patch.moveInAt,
       patch.moveOutAt === undefined ? current.moveOutAt : patch.moveOutAt,
       patch.status ?? current.status,
@@ -195,6 +191,7 @@ export async function insertResidentOccupancy(input: {
   startsAt?: string | null;
   endsAt?: string | null;
   isCurrent?: boolean;
+  isPrimary?: boolean;
   notes?: string | null;
   createdBy: string | null;
   deviceId: string | null;
@@ -204,8 +201,8 @@ export async function insertResidentOccupancy(input: {
   await getDatabase().run(
     `INSERT INTO resident_occupancies (
       id, tenant_id, site_id, unit_id, resident_id, relation_key, relation_label_snapshot,
-      starts_at, ends_at, is_current, notes, created_by, created_at, updated_at, deleted_at, version, sync_status, device_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 1, 'local', ?)`,
+      starts_at, ends_at, is_current, is_primary, notes, created_by, created_at, updated_at, deleted_at, version, sync_status, device_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, 1, 'local', ?)`,
     [
       id,
       input.tenantId,
@@ -217,6 +214,7 @@ export async function insertResidentOccupancy(input: {
       input.startsAt ?? null,
       input.endsAt ?? null,
       sqlBool(input.isCurrent ?? true),
+      sqlBool(input.isPrimary ?? false),
       input.notes ?? null,
       input.createdBy,
       ts,
@@ -253,7 +251,7 @@ export async function listResidentOccupancies(
   input?: { unitId?: string | null; residentId?: string | null; currentOnly?: boolean },
 ): Promise<ResidentOccupancy[]> {
   const rows = await getDatabase().getAll<OccupancyRow>(
-    `SELECT * FROM resident_occupancies WHERE tenant_id = ? AND deleted_at IS NULL ORDER BY created_at DESC`,
+    `SELECT * FROM resident_occupancies WHERE tenant_id = ? AND deleted_at IS NULL ORDER BY is_current DESC, created_at DESC`,
     [tenantId],
   );
   return rows
@@ -264,6 +262,11 @@ export async function listResidentOccupancies(
         (!input?.residentId || item.residentId === input.residentId) &&
         (!input?.currentOnly || item.isCurrent),
     );
+}
+
+export async function hasCurrentOccupancy(tenantId: string, residentId: string, unitId: string): Promise<boolean> {
+  const rows = await listResidentOccupancies(tenantId, { residentId, unitId, currentOnly: true });
+  return rows.length > 0;
 }
 
 export async function endResidentOccupancy(id: string, tenantId: string, endsAt: string): Promise<void> {
