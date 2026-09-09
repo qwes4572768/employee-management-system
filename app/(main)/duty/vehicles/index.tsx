@@ -53,7 +53,7 @@ export default function DutyVehiclesScreen() {
       const all = await listVisitorPassesForActor(actor, { siteId: currentSite.id });
       setVisitors(all.filter((item) => item.status === 'registered' || item.status === 'checked_in'));
     }
-  }, [actor, can, currentSite?.id]);
+  }, [actor, can, currentSite]);
 
   useFocusEffect(
     useCallback(() => {

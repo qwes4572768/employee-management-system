@@ -22,7 +22,7 @@ export default function ParkingDashboardScreen() {
   const load = useCallback(async () => {
     if (!currentSite?.id) return;
     setCard(await getMobilityHomeCard(actor, currentSite.id));
-  }, [actor, currentSite?.id]);
+  }, [actor, currentSite]);
 
   useFocusEffect(
     useCallback(() => {

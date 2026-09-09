@@ -611,10 +611,16 @@ async function main() {
   const other = await seed('他司車', 'other.p3b.admin');
   const otherAdmin = asActor(other.user);
   await expectFailure(() => getParkingSpaceForActor(otherAdmin, space01.id), '其他公司', 'cross tenant rejected');
+  const spaceB = await createParkingSpaceForActor(admin, {
+    siteId: siteB.id,
+    spaceNo: 'X1',
+    spaceType: 'private',
+  });
+  await expectFailure(() => getParkingSpaceForActor(staffActor, spaceB.id), '案場', 'site scope rejected');
   await expectFailure(
-    () => createParkingSpaceForActor(staffActor, { siteId: siteB.id, spaceNo: 'X1', spaceType: 'private' }),
+    () => checkInVehicleForActor(staffActor, { siteId: siteB.id, plateNo: 'SITEB-1' }),
     '案場',
-    'site scope rejected',
+    'site scope check-in rejected',
   );
 
   const logs = await listAuditLogs(seeded.tenant.id);
