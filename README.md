@@ -1,106 +1,58 @@
-# GPS打卡員工管理系統
+# 勤管系統 QinGuan System
 
-一個基於 Flask 的現代化員工管理系統，具備 GPS 打卡功能、員工資料管理和考勤記錄追蹤。
+保全與物業勤務管理 APP（第一階段：iOS / Android，Offline First）。
 
-## 🚀 功能特色
+## 技術
 
-- **GPS 打卡系統**：精確定位員工打卡位置
-- **員工資料管理**：完整的員工資訊 CRUD 操作
-- **考勤記錄追蹤**：詳細的上下班時間記錄
-- **響應式 Web 介面**：支援桌面和行動裝置
-- **資料庫管理**：SQLite 資料庫，支援資料遷移
+- React Native + Expo SDK 57
+- TypeScript
+- Expo Router
+- expo-sqlite
+- 本機安全登入（PBKDF2-SHA256，session 存 SecureStore）
 
-## 🛠️ 技術架構
+## 啟動
 
-- **後端框架**：Flask (Python)
-- **資料庫**：SQLite
-- **前端技術**：HTML5, CSS3, JavaScript
-- **部署平台**：支援 Heroku 部署
-
-## 📋 系統需求
-
-- Python 3.7+
-- Flask 2.0+
-- 現代化瀏覽器支援
-
-## 🚀 快速開始
-
-### 1. 克隆專案
 ```bash
-git clone https://github.com/qwes4572768/employee-management-system.git
-cd employee-management-system
+npm install
+npx expo start
 ```
 
-### 2. 安裝依賴
+然後以 Expo Go 在 Android / iOS 測試。
+
+## 品質檢查
+
 ```bash
-pip install -r requirements.txt
+npm run typecheck
+npm run lint
+npm test
+npx expo-doctor
 ```
 
-### 3. 初始化資料庫
-```bash
-python migrate_db.py
-```
+## 第一次使用
 
-### 4. 啟動應用
-```bash
-python app.py
-```
+1. 啟動後進入歡迎頁
+2. 選擇「建立新系統」
+3. 建立第一位總管理員（不可使用 admin / 123456 這類預設帳密）
+4. 建立公司資料
+5. 可建立第一個案場，或稍後再建立
+6. 進入首頁
 
-### 5. 訪問系統
-在瀏覽器中打開 `http://localhost:5000`
+第二次啟動會進入登入頁，資料保存在本機 SQLite。
 
-## 📁 專案結構
+## 產品 Logo
 
-```
-tmie/
-├── app.py                 # 主應用程式
-├── migrate_db.py          # 資料庫遷移腳本
-├── requirements.txt       # Python 依賴
-├── templates/            # HTML 模板
-│   ├── base.html         # 基礎模板
-│   ├── dashboard.html    # 儀表板
-│   ├── login.html        # 登入頁面
-│   └── ...              # 其他頁面
-├── instance/             # 資料庫檔案
-└── README.md            # 專案說明
-```
+請將正式「勤管系統」藍色雙子座 Logo 放到：
 
-## 🔧 配置說明
+- `assets/icon.png`
+- `assets/adaptive-icon.png`
+- `assets/splash.png`
 
-### 環境變數
-- `SECRET_KEY`：Flask 應用密鑰
-- `DATABASE_URL`：資料庫連接字串
+目前僅為深色空白佔位，沒有使用假 Logo。
 
-### 資料庫配置
-系統使用 SQLite 資料庫，資料檔案位於 `instance/employee_management.db`
+## 架構
 
-## 📱 使用說明
+UI → Service → Repository → SQLite
 
-1. **登入系統**：使用管理員帳號登入
-2. **員工管理**：新增、編輯、刪除員工資料
-3. **GPS 打卡**：員工可透過 GPS 定位進行打卡
-4. **考勤記錄**：查看和管理員工考勤資料
+資料表預留 `tenantId`、`syncStatus`、`deviceId`、`version`、soft delete，以支援未來多租戶雲端同步。
 
-## 🚀 部署到 Heroku
-
-1. 確保已安裝 Heroku CLI
-2. 登入 Heroku：`heroku login`
-3. 創建應用：`heroku create your-app-name`
-4. 部署：`git push heroku main`
-
-## 🤝 貢獻指南
-
-歡迎提交 Issue 和 Pull Request 來改善這個專案！
-
-## 📄 授權條款
-
-本專案採用 MIT 授權條款 - 詳見 [LICENSE](LICENSE) 檔案
-
-## 📞 聯絡資訊
-
-- 專案維護者：qwes4572768
-- GitHub：[https://github.com/qwes4572768](https://github.com/qwes4572768)
-
----
-
-⭐ 如果這個專案對您有幫助，請給我們一個星標！
+舊版 Flask 網頁原型已移至 `legacy-web/`。

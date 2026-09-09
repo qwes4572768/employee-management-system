@@ -1,0 +1,42 @@
+import { Stack } from 'expo-router';
+
+import { useTheme } from '@/theme/ThemeProvider';
+
+export default function DutyLayout() {
+  const { colors } = useTheme();
+  return (
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.bgElevated },
+        headerTintColor: colors.text,
+        headerTitleStyle: { fontWeight: '700' },
+        contentStyle: { backgroundColor: colors.bg },
+      }}
+    >
+      <Stack.Screen name="index" options={{ title: '勤務' }} />
+      <Stack.Screen name="schedule" options={{ title: '我的班表' }} />
+      <Stack.Screen name="clock" options={{ title: '出勤打卡' }} />
+      <Stack.Screen name="leave" options={{ title: '我的假勤' }} />
+      <Stack.Screen name="leave-new" options={{ title: '申請假勤' }} />
+      <Stack.Screen name="leave-detail" options={{ title: '假勤明細' }} />
+      <Stack.Screen name="correction-new" options={{ title: '申請補卡' }} />
+      <Stack.Screen name="scan" options={{ title: '掃描 QR' }} />
+      <Stack.Screen name="patrol/index" options={{ title: '智慧巡邏' }} />
+      <Stack.Screen name="patrol/[taskId]" options={{ title: '巡邏任務' }} />
+      <Stack.Screen name="patrol/check" options={{ title: '完成巡邏點' }} />
+      <Stack.Screen name="patrol/exception" options={{ title: '發現異常' }} />
+      <Stack.Screen name="visitors/index" options={{ title: '訪客進出' }} />
+      <Stack.Screen name="visitors/register" options={{ title: '訪客登記' }} />
+      <Stack.Screen name="visitors/[id]" options={{ title: '訪客進出辦理' }} />
+      <Stack.Screen name="parcels/index" options={{ title: '包裹領取' }} />
+      <Stack.Screen name="parcels/register" options={{ title: '包裹登記' }} />
+      <Stack.Screen name="parcels/[id]" options={{ title: '包裹領取簽收' }} />
+      <Stack.Screen name="vehicles/index" options={{ title: '車輛進出' }} />
+      <Stack.Screen name="parking/index" options={{ title: '車位與占用' }} />
+      <Stack.Screen name="keys/index" options={{ title: '鑰匙借還' }} />
+      <Stack.Screen name="keys/[id]" options={{ title: '鑰匙辦理' }} />
+      <Stack.Screen name="loan-items/index" options={{ title: '物品借用' }} />
+      <Stack.Screen name="loan-items/[id]" options={{ title: '物品辦理' }} />
+    </Stack>
+  );
+}

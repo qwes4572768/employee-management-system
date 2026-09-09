@@ -1,0 +1,8 @@
+{
+  "source": "./logo.png",
+  "background": "#000000",
+  "iconScale": 0.72,
+  "adaptiveForegroundScale": 0.52,
+  "splashScale": 0.62,
+  "faviconSize": 48
+}
