@@ -67,6 +67,21 @@ export default function ManageStack() {
       <Stack.Screen name="visitors/[id]" options={{ title: '訪客明細' }} />
       <Stack.Screen name="parcels/index" options={{ title: '包裹中心' }} />
       <Stack.Screen name="parcels/[id]" options={{ title: '包裹明細' }} />
+      <Stack.Screen name="parking-spaces/index" options={{ title: '車位管理' }} />
+      <Stack.Screen name="parking-spaces/new" options={{ title: '新增車位' }} />
+      <Stack.Screen name="parking-spaces/[id]" options={{ title: '車位詳情' }} />
+      <Stack.Screen name="vehicles/index" options={{ title: '車輛管理' }} />
+      <Stack.Screen name="vehicles/new" options={{ title: '新增車輛' }} />
+      <Stack.Screen name="vehicles/[id]" options={{ title: '車輛詳情' }} />
+      <Stack.Screen name="parking-dashboard/index" options={{ title: '停車戰情' }} />
+      <Stack.Screen name="parking-violations/index" options={{ title: '違停 / 占用異常' }} />
+      <Stack.Screen name="parking-violations/[id]" options={{ title: '占用異常明細' }} />
+      <Stack.Screen name="keys/index" options={{ title: '鑰匙中心' }} />
+      <Stack.Screen name="keys/new" options={{ title: '新增鑰匙' }} />
+      <Stack.Screen name="keys/[id]" options={{ title: '鑰匙詳情' }} />
+      <Stack.Screen name="loan-items/index" options={{ title: '物品借用中心' }} />
+      <Stack.Screen name="loan-items/new" options={{ title: '新增物品' }} />
+      <Stack.Screen name="loan-items/[id]" options={{ title: '物品詳情' }} />
     </Stack>
   );
 }

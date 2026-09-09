@@ -73,6 +73,21 @@ export type {
   VisitorPass,
 } from './community';
 export type {
+  ItemLoanTransaction,
+  KeyTransaction,
+  LoanItem,
+  ManagedKey,
+  MobilityHomeCard,
+  ParkingAssignment,
+  ParkingOccupancy,
+  ParkingSpace,
+  ParkingViolation,
+  ResidentVehicle,
+  SiteParkingSettings,
+  VehicleAccessPass,
+  VehicleMovement,
+} from './mobility';
+export type {
   AuditLog,
   AuditResult,
   AuthContextValue,

@@ -8,6 +8,7 @@ import type {
   CommunityHomeCard,
   InspectionHomeCard,
   InspectionSiteDashboard,
+  MobilityHomeCard,
   PatrolHomeCard,
   PatrolSiteDashboard,
   Site,
@@ -27,6 +28,7 @@ import { getOwnActivePatrolCard } from './patrolTaskService';
 import { getManagerPatrolHomeStats } from './patrolDashboardService';
 import { getCommunityHomeCard } from './communityDashboardService';
 import { getInspectionHomeCard, getInspectionSiteDashboard } from './inspectionDashboardService';
+import { getMobilityHomeCard } from './mobilityDashboardService';
 
 export type DutyStatus = 'not_arrived' | 'clocked_in' | 'on_duty' | 'duty_ended' | 'late' | 'exception';
 
@@ -137,6 +139,7 @@ export async function getDashboardSnapshot(
   inspectionCard: InspectionHomeCard | null;
   inspectionSite: InspectionSiteDashboard | null;
   communityCard: CommunityHomeCard | null;
+  mobilityCard: MobilityHomeCard | null;
 }> {
   const tenantId = requireActorTenant(actor);
   const now = input.at ?? new Date();
@@ -156,6 +159,7 @@ export async function getDashboardSnapshot(
       inspectionCard: null,
       inspectionSite: null,
       communityCard: null,
+      mobilityCard: null,
     };
   }
   const self = await getUserById(actor.userId, tenantId);
@@ -170,6 +174,7 @@ export async function getDashboardSnapshot(
       inspectionCard: null,
       inspectionSite: null,
       communityCard: null,
+      mobilityCard: null,
     };
   }
 
@@ -276,6 +281,22 @@ export async function getDashboardSnapshot(
     }
   }
 
+  let mobilityCard: MobilityHomeCard | null = null;
+  if (
+    site &&
+    (keys.includes('mobilityDashboard.view') ||
+      keys.includes('vehicleAccess.view') ||
+      keys.includes('key.view') ||
+      keys.includes('loanItem.view') ||
+      keys.includes('parkingOccupancy.view'))
+  ) {
+    try {
+      mobilityCard = await getMobilityHomeCard(actor, site.id, now);
+    } catch {
+      mobilityCard = null;
+    }
+  }
+
   return {
     primary,
     others,
@@ -286,5 +307,6 @@ export async function getDashboardSnapshot(
     inspectionCard,
     inspectionSite,
     communityCard,
+    mobilityCard,
   };
 }

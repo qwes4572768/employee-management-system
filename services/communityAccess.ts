@@ -2,7 +2,25 @@ import { getParcelById } from '@/repositories/parcelRepository';
 import { getResidentById, getResidentOccupancyById, hasCurrentOccupancy } from '@/repositories/residentRepository';
 import { getSiteUnitById } from '@/repositories/unitRepository';
 import { getVisitorPassById } from '@/repositories/visitorRepository';
-import type { Parcel, Resident, ResidentOccupancy, SiteUnit, VisitorPass } from '@/types';
+import { getParkingSpaceById, getParkingAssignmentById, getParkingOccupancyById, getParkingViolationById } from '@/repositories/parkingRepository';
+import { getResidentVehicleById, getVehicleAccessPassById } from '@/repositories/vehicleRepository';
+import { getManagedKeyById } from '@/repositories/keyRepository';
+import { getLoanItemById } from '@/repositories/loanItemRepository';
+import type {
+  LoanItem,
+  ManagedKey,
+  Parcel,
+  ParkingAssignment,
+  ParkingOccupancy,
+  ParkingSpace,
+  ParkingViolation,
+  Resident,
+  ResidentOccupancy,
+  ResidentVehicle,
+  SiteUnit,
+  VehicleAccessPass,
+  VisitorPass,
+} from '@/types';
 
 import type { ActorContext } from './actor';
 import { requireActorSiteAccess, requireTenantRecord } from './patrolAccess';
@@ -55,4 +73,61 @@ export async function requireCurrentOccupancy(
 ): Promise<void> {
   const ok = await hasCurrentOccupancy(tenantId, residentId, unitId);
   if (!ok) throw new Error(missing);
+}
+
+export async function requireParkingSpaceInTenant(id: string, tenantId: string): Promise<ParkingSpace> {
+  return requireTenantRecord(await getParkingSpaceById(id, tenantId), tenantId, () => getParkingSpaceById(id), '找不到車位');
+}
+
+export async function requireParkingAssignmentInTenant(id: string, tenantId: string): Promise<ParkingAssignment> {
+  return requireTenantRecord(
+    await getParkingAssignmentById(id, tenantId),
+    tenantId,
+    () => getParkingAssignmentById(id),
+    '找不到車位指派',
+  );
+}
+
+export async function requireResidentVehicleInTenant(id: string, tenantId: string): Promise<ResidentVehicle> {
+  return requireTenantRecord(
+    await getResidentVehicleById(id, tenantId),
+    tenantId,
+    () => getResidentVehicleById(id),
+    '找不到車輛',
+  );
+}
+
+export async function requireVehicleAccessPassInTenant(id: string, tenantId: string): Promise<VehicleAccessPass> {
+  return requireTenantRecord(
+    await getVehicleAccessPassById(id, tenantId),
+    tenantId,
+    () => getVehicleAccessPassById(id),
+    '找不到車輛通行證',
+  );
+}
+
+export async function requireParkingOccupancyInTenant(id: string, tenantId: string): Promise<ParkingOccupancy> {
+  return requireTenantRecord(
+    await getParkingOccupancyById(id, tenantId),
+    tenantId,
+    () => getParkingOccupancyById(id),
+    '找不到占用紀錄',
+  );
+}
+
+export async function requireParkingViolationInTenant(id: string, tenantId: string): Promise<ParkingViolation> {
+  return requireTenantRecord(
+    await getParkingViolationById(id, tenantId),
+    tenantId,
+    () => getParkingViolationById(id),
+    '找不到違停紀錄',
+  );
+}
+
+export async function requireManagedKeyInTenant(id: string, tenantId: string): Promise<ManagedKey> {
+  return requireTenantRecord(await getManagedKeyById(id, tenantId), tenantId, () => getManagedKeyById(id), '找不到鑰匙');
+}
+
+export async function requireLoanItemInTenant(id: string, tenantId: string): Promise<LoanItem> {
+  return requireTenantRecord(await getLoanItemById(id, tenantId), tenantId, () => getLoanItemById(id), '找不到物品');
 }

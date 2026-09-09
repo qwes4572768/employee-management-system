@@ -13,7 +13,7 @@ import { GENDER_LABELS } from '@/constants/app';
 import { useSession } from '@/providers/SessionProvider';
 import { DUTY_STATUS_LABELS, getDashboardSnapshot, type DashboardStaffingStats, type OnDutyCard } from '@/services/dashboardService';
 import { INSPECTION_GRADE_LABELS } from '@/constants/inspection';
-import type { CommunityHomeCard, InspectionHomeCard, InspectionSiteDashboard, PatrolHomeCard, PatrolSiteDashboard } from '@/types';
+import type { CommunityHomeCard, InspectionHomeCard, InspectionSiteDashboard, MobilityHomeCard, PatrolHomeCard, PatrolSiteDashboard } from '@/types';
 import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
@@ -32,6 +32,7 @@ export default function DashboardScreen() {
   const [inspectionCard, setInspectionCard] = useState<InspectionHomeCard | null>(null);
   const [inspectionSite, setInspectionSite] = useState<InspectionSiteDashboard | null>(null);
   const [communityCard, setCommunityCard] = useState<CommunityHomeCard | null>(null);
+  const [mobilityCard, setMobilityCard] = useState<MobilityHomeCard | null>(null);
   const [selected, setSelected] = useState<OnDutyCard | null>(null);
 
   const load = useCallback(async () => {
@@ -45,6 +46,7 @@ export default function DashboardScreen() {
     setInspectionCard(snap.inspectionCard);
     setInspectionSite(snap.inspectionSite);
     setCommunityCard(snap.communityCard);
+    setMobilityCard(snap.mobilityCard);
     setSelected(snap.primary);
   }, [actor, currentSite?.id]);
 
@@ -215,6 +217,19 @@ export default function DashboardScreen() {
           <>
             <StatCard label="在場訪客" value={String(communityCard.visitorsOnSite)} hint={`今日登記 ${communityCard.visitorsToday}`} />
             <StatCard label="待領包裹" value={String(communityCard.parcelsWaiting)} hint={`今日到件 ${communityCard.parcelsToday}`} />
+          </>
+        ) : null}
+        {mobilityCard ? (
+          <>
+            <StatCard label="場內車輛" value={String(mobilityCard.vehiclesOnSite)} hint={`訪客／臨停 ${mobilityCard.visitorVehiclesOnSite}`} />
+            <StatCard
+              label="車位占用率"
+              value={`${mobilityCard.occupancyRate}%`}
+              hint={`${mobilityCard.occupiedSpaces} / ${mobilityCard.totalActiveSpaces}`}
+            />
+            <StatCard label="占用異常" value={String(mobilityCard.openViolations)} hint={`臨停逾時 ${mobilityCard.overstayedOccupancies}`} />
+            <StatCard label="鑰匙借出" value={String(mobilityCard.keysCheckedOut)} hint={`逾期 ${mobilityCard.keysOverdue}`} />
+            <StatCard label="物品借出" value={String(mobilityCard.itemsLoaned)} hint={`逾期 ${mobilityCard.itemsOverdue}`} />
           </>
         ) : null}
       </StatGrid>

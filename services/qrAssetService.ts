@@ -1,4 +1,4 @@
-import { QR_ASSET_TYPE_LABELS, QR_ASSET_TYPES, QR_PHASE_COMPLETE_TYPES, type QrAssetType } from '@/constants/qr';
+import { QR_ASSET_TYPE_LABELS, QR_ASSET_TYPES, QR_PHASE_COMPLETE_TYPES, QR_TARGET_TYPES, type QrAssetType, type QrTargetType } from '@/constants/qr';
 import {
   deactivateQrAsset,
   getActiveQrAssetForTarget,
@@ -8,6 +8,8 @@ import {
   reactivateQrAsset,
 } from '@/repositories/qrAssetRepository';
 import { getPatrolPointById } from '@/repositories/patrolPointRepository';
+import { getManagedKeyById } from '@/repositories/keyRepository';
+import { getLoanItemById } from '@/repositories/loanItemRepository';
 import { getSiteById } from '@/repositories/siteRepository';
 import { getTenantById } from '@/repositories/tenantRepository';
 import { getUserById, listUsersByTenant } from '@/repositories/userRepository';
@@ -144,6 +146,7 @@ async function issueQr(
   actor: ActorContext,
   input: {
     assetType: QrAssetType;
+    targetType?: QrTargetType;
     targetId: string;
     siteId?: string | null;
     displayName: string;
@@ -153,9 +156,10 @@ async function issueQr(
   const tenantId = requireActorTenant(actor);
   await requireActorPermission(actor, 'qrAsset.create');
   if (!QR_PHASE_COMPLETE_TYPES.includes(input.assetType)) {
-    throw new Error(`${QR_ASSET_TYPE_LABELS[input.assetType]}將於後續階段建立，本階段僅支援人員、案場與巡邏點 QR`);
+    throw new Error(`${QR_ASSET_TYPE_LABELS[input.assetType]}將於後續階段建立，本階段僅支援人員、案場、巡邏點與鑰匙／物品 QR`);
   }
-  const existing = await getActiveQrAssetForTarget(tenantId, input.assetType, input.targetId);
+  const targetType = input.targetType ?? input.assetType;
+  const existing = await getActiveQrAssetForTarget(tenantId, targetType, input.targetId);
   if (existing && !input.regenerate) {
     throw new Error('此對象已有有效的永久 QR，請先停用或改為重新產生');
   }
@@ -184,7 +188,7 @@ async function issueQr(
       tenantId,
       siteId: input.siteId ?? null,
       assetType: input.assetType,
-      targetType: input.assetType,
+      targetType,
       targetId: input.targetId,
       qrCode: buildQrPayload(),
       displayName: input.displayName,
@@ -264,6 +268,49 @@ export async function issuePatrolPointQr(
     siteId: point.siteId,
     displayName: point.name,
     regenerate,
+  });
+}
+
+export async function issueKeyItemQr(
+  actor: ActorContext,
+  input: { targetId: string; targetType: 'managed_key' | 'loan_item'; regenerate?: boolean },
+): Promise<QrAsset> {
+  const tenantId = requireActorTenant(actor);
+  if (input.targetType === 'managed_key') {
+    const key = await getManagedKeyById(input.targetId, tenantId);
+    if (!key) {
+      const existing = await getManagedKeyById(input.targetId);
+      if (existing) throw new TenantAccessError();
+      throw new Error('找不到鑰匙');
+    }
+    if (!(await actorCanAccessSite(actor, key.siteId))) {
+      throw new Error('您沒有權限為此鑰匙建立 QR');
+    }
+    return issueQr(actor, {
+      assetType: QR_ASSET_TYPES.KEY_ITEM,
+      targetType: QR_TARGET_TYPES.MANAGED_KEY,
+      targetId: key.id,
+      siteId: key.siteId,
+      displayName: key.name,
+      regenerate: input.regenerate,
+    });
+  }
+  const item = await getLoanItemById(input.targetId, tenantId);
+  if (!item) {
+    const existing = await getLoanItemById(input.targetId);
+    if (existing) throw new TenantAccessError();
+    throw new Error('找不到物品');
+  }
+  if (!(await actorCanAccessSite(actor, item.siteId))) {
+    throw new Error('您沒有權限為此物品建立 QR');
+  }
+  return issueQr(actor, {
+    assetType: QR_ASSET_TYPES.KEY_ITEM,
+    targetType: QR_TARGET_TYPES.LOAN_ITEM,
+    targetId: item.id,
+    siteId: item.siteId,
+    displayName: item.name,
+    regenerate: input.regenerate,
   });
 }
 

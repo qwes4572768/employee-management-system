@@ -1,4 +1,4 @@
-import type { QrAssetStatus, QrAssetType, QrScanResult } from '@/constants/qr';
+import type { QrAssetStatus, QrAssetType, QrScanResult, QrTargetType } from '@/constants/qr';
 import type { Gender, SyncMeta } from './models';
 
 export interface QrAsset extends SyncMeta {
@@ -6,7 +6,7 @@ export interface QrAsset extends SyncMeta {
   tenantId: string;
   siteId: string | null;
   assetType: QrAssetType;
-  targetType: QrAssetType;
+  targetType: QrTargetType;
   targetId: string;
   qrCode: string;
   displayName: string;
@@ -72,5 +72,14 @@ export interface QrScanOutcome {
   asset: QrAsset | null;
   employee: EmployeeQrProfile | null;
   site: SiteQrProfile | null;
+  keyLoan: {
+    kind: 'managed_key' | 'loan_item';
+    name: string;
+    status: string;
+    storageLocation: string | null;
+    checkedOut: boolean;
+    borrowerName: string | null;
+    dueAt: string | null;
+  } | null;
   deactivatedAt: string | null;
 }

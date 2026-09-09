@@ -216,7 +216,7 @@ async function main() {
   const db = await openDb();
   const version = await migrate(db);
   assert(version === CURRENT_SCHEMA_VERSION, `fresh install expected ${CURRENT_SCHEMA_VERSION}, got ${version}`);
-  assert(CURRENT_SCHEMA_VERSION === 9, 'schema version must be 9');
+  assert(CURRENT_SCHEMA_VERSION === 10, 'schema version must be 10');
   assert(await isForeignKeysEnabled(db), 'FK must be on');
   const residentCols = await db.getAll<{ name: string }>('PRAGMA table_info(residents)');
   assert(!residentCols.some((item) => item.name === 'unit_id'), 'residents.unit_id must be removed');
@@ -472,7 +472,7 @@ async function main() {
   const before = await getSchemaVersion(upgradeDb);
   assert(before === 8, `pre-upgrade ${before}`);
   const upgraded = await migrate(upgradeDb);
-  assert(upgraded === 9, `upgrade 008→009 got ${upgraded}`);
+  assert(upgraded === CURRENT_SCHEMA_VERSION, `upgrade 008→${CURRENT_SCHEMA_VERSION} got ${upgraded}`);
   const keepResident = await upgradeDb.getFirst<{ full_name: string }>('SELECT full_name FROM residents WHERE id = ?', ['r-keep']);
   assert(keepResident?.full_name === '保留住戶', 'resident kept');
   const colsAfter = await upgradeDb.getAll<{ name: string }>('PRAGMA table_info(residents)');

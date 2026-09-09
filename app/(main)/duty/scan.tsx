@@ -212,6 +212,27 @@ function ScanResultCard({ outcome }: { outcome: QrScanOutcome }) {
       </QinCard>
     );
   }
+  if (outcome.keyLoan) {
+    const item = outcome.keyLoan;
+    return (
+      <QinCard style={{ marginTop: spacing.md }}>
+        <Text style={textStyle(colors, fontScale, 'xl', { fontWeight: '800' })}>{item.name}</Text>
+        <Text style={textStyle(colors, fontScale, 'sm', { color: colors.accent, marginTop: 6 })}>
+          {item.kind === 'managed_key' ? '鑰匙' : '公共物品'} · {item.status}
+        </Text>
+        <Text style={textStyle(colors, fontScale, 'sm', { marginTop: 4 })}>存放位置：{item.storageLocation ?? '—'}</Text>
+        <Text style={textStyle(colors, fontScale, 'sm', { marginTop: 4 })}>
+          {item.checkedOut ? '目前已借出' : '目前可借用'}
+        </Text>
+        {item.borrowerName ? (
+          <Text style={textStyle(colors, fontScale, 'sm', { marginTop: 4 })}>借用人：{item.borrowerName}</Text>
+        ) : null}
+        {item.dueAt ? (
+          <Text style={textStyle(colors, fontScale, 'sm', { marginTop: 4 })}>應還時間：{formatDateTimeZh(item.dueAt)}</Text>
+        ) : null}
+      </QinCard>
+    );
+  }
   return (
     <QinCard style={{ marginTop: spacing.md }}>
       <Text style={textStyle(colors, fontScale, 'sm')}>{outcome.message}</Text>

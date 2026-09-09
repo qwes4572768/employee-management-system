@@ -1,5 +1,5 @@
 import { getDatabase } from '@/database/runtime';
-import type { QrAssetStatus, QrAssetType } from '@/constants/qr';
+import type { QrAssetStatus, QrAssetType, QrTargetType } from '@/constants/qr';
 import type { QrAsset } from '@/types';
 import { nowIso } from '@/utils/datetime';
 import { createId } from '@/utils/id';
@@ -29,7 +29,7 @@ function mapAsset(row: QrAssetRow): QrAsset {
     tenantId: row.tenant_id,
     siteId: row.site_id,
     assetType: row.asset_type as QrAssetType,
-    targetType: row.target_type as QrAssetType,
+    targetType: row.target_type as QrTargetType,
     targetId: row.target_id,
     qrCode: row.qr_code,
     displayName: row.display_name,
@@ -47,7 +47,7 @@ export interface QrAssetInsert {
   tenantId: string;
   siteId?: string | null;
   assetType: QrAssetType;
-  targetType: QrAssetType;
+  targetType: QrTargetType;
   targetId: string;
   qrCode: string;
   displayName: string;
@@ -109,7 +109,7 @@ export async function getQrAssetByCode(qrCode: string, tenantId?: string | null)
 
 export async function getActiveQrAssetForTarget(
   tenantId: string,
-  targetType: QrAssetType,
+  targetType: QrTargetType,
   targetId: string,
 ): Promise<QrAsset | null> {
   const row = await getDatabase().getFirst<QrAssetRow>(

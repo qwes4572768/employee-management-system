@@ -89,6 +89,24 @@ export default function ManageHome() {
       {can('parcel.view') || can('parcel.manage') ? (
         <ListRow title="包裹中心" subtitle="到件、通知、領取與退件" onPress={() => router.push('/(main)/manage/parcels')} />
       ) : null}
+      {can('parkingSpace.view') || can('parkingSpace.manage') ? (
+        <ListRow title="車位管理" subtitle="車位主檔、指派與臨停上限" onPress={() => router.push('/(main)/manage/parking-spaces')} />
+      ) : null}
+      {can('vehicle.view') || can('vehicle.manage') ? (
+        <ListRow title="車輛管理" subtitle="住戶車輛與通行證" onPress={() => router.push('/(main)/manage/vehicles')} />
+      ) : null}
+      {can('mobilityDashboard.view') || can('parkingOccupancy.view') ? (
+        <ListRow title="停車戰情" subtitle="場內車輛、占用率與逾時" onPress={() => router.push('/(main)/manage/parking-dashboard')} />
+      ) : null}
+      {can('parkingViolation.view') || can('parkingViolation.manage') ? (
+        <ListRow title="違停 / 占用異常" subtitle="占用他人車位、臨停逾時與結案" onPress={() => router.push('/(main)/manage/parking-violations')} />
+      ) : null}
+      {can('key.view') || can('key.manage') ? (
+        <ListRow title="鑰匙中心" subtitle="鑰匙主檔、借出與逾期" onPress={() => router.push('/(main)/manage/keys')} />
+      ) : null}
+      {can('loanItem.view') || can('loanItem.manage') ? (
+        <ListRow title="物品借用中心" subtitle="公共物品、庫存與借還" onPress={() => router.push('/(main)/manage/loan-items')} />
+      ) : null}
     </Screen>
   );
 }

@@ -32,7 +32,15 @@ export default function MainLayout() {
     can('visitor.view') ||
     can('parcel.view') ||
     can('parcel.manage') ||
-    can('communityDashboard.view');
+    can('communityDashboard.view') ||
+    can('parkingSpace.view') ||
+    can('vehicle.view') ||
+    can('mobilityDashboard.view') ||
+    can('parkingViolation.view') ||
+    can('key.view') ||
+    can('key.manage') ||
+    can('loanItem.view') ||
+    can('loanItem.manage');
 
   if (!session || user?.status !== 'active') {
     return <Redirect href="/(auth)/login" />;

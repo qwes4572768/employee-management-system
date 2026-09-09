@@ -1,22 +1,22 @@
-import {
-  QR_ASSET_TYPES,
-  QR_SCAN_COOLDOWN_MS,
-  QR_SCAN_RESULTS,
-  type QrScanResult,
-} from '@/constants/qr';
+import { QR_ASSET_TYPES, QR_SCAN_COOLDOWN_MS, QR_SCAN_RESULTS, type QrScanResult } from '@/constants/qr';
+import { MANAGED_KEY_STATUS_LABELS, LOAN_ITEM_STATUS_LABELS } from '@/constants/mobility';
 import { getQrAssetByCode, recordQrAssetScan } from '@/repositories/qrAssetRepository';
 import { countQrScanLogsForCodeSince, insertQrScanLog, listQrScanLogs } from '@/repositories/qrScanLogRepository';
 import { getTenantById } from '@/repositories/tenantRepository';
 import { getUserById } from '@/repositories/userRepository';
+import { getManagedKeyById, listKeyTransactions } from '@/repositories/keyRepository';
+import { getLoanItemById, listItemLoanTransactions } from '@/repositories/loanItemRepository';
 import type { EmployeeQrProfile, QrAsset, QrScanLog, QrScanOutcome, SiteQrProfile } from '@/types';
 import { formatDateTimeZh, nowIso } from '@/utils/datetime';
 import { isQinGuanQrPayload } from '@/utils/qrPayload';
 
-import { requireActorPermission } from './access';
+import { actorPermissionKeys, requireActorPermission } from './access';
 import type { ActorContext } from './actor';
 import { writeAudit } from './auditService';
 import { DUTY_STATUS_LABELS, getPersonDutyCard } from './dashboardService';
 import { getLocationProvider } from './locationProvider';
+import { openKeyCheckout } from './keyService';
+import { outstandingForBorrow } from './loanItemService';
 import { actorCanAccessSite, actorCanAccessTargetUser } from './qrAssetService';
 import { getAuthorizedSites } from './siteService';
 import { getSiteById } from '@/repositories/siteRepository';
@@ -180,6 +180,7 @@ export async function scanQr(
     asset: null,
     employee: null,
     site: null,
+    keyLoan: null,
     deactivatedAt: null,
     ...extra,
   });
@@ -329,6 +330,7 @@ export async function scanQr(
       asset,
       employee,
       site: null,
+      keyLoan: null,
       deactivatedAt: null,
     };
   }
@@ -374,6 +376,90 @@ export async function scanQr(
       asset,
       employee: null,
       site,
+      keyLoan: null,
+      deactivatedAt: null,
+    };
+  }
+
+  if (asset.assetType === QR_ASSET_TYPES.KEY_ITEM) {
+    const keys = await actorPermissionKeys(actor);
+    const allowedSite = asset.siteId ? await actorCanAccessSite(actor, asset.siteId) : false;
+    const canView =
+      (asset.targetType === 'managed_key' && keys.includes('key.view')) ||
+      (asset.targetType === 'loan_item' && keys.includes('loanItem.view'));
+    if (!allowedSite || !canView) {
+      const log = await writeScan({
+        actor,
+        tenantId,
+        code,
+        result: QR_SCAN_RESULTS.UNAUTHORIZED,
+        asset,
+        at,
+        lat: latitude,
+        lng: longitude,
+      });
+      await recordQrAssetScan(asset.id, tenantId, at);
+      lastHandled.set(key, atDate.getTime());
+      await maybeAuditScan(actor, QR_SCAN_RESULTS.UNAUTHORIZED, '掃描鑰匙／物品 QR 但沒有查看權限', asset.id);
+      return empty(QR_SCAN_RESULTS.UNAUTHORIZED, '您沒有權限查看此資產', log);
+    }
+
+    let keyLoan: QrScanOutcome['keyLoan'] = null;
+    if (asset.targetType === 'managed_key') {
+      const managed = await getManagedKeyById(asset.targetId, tenantId);
+      if (managed) {
+        const txs = await listKeyTransactions(tenantId, managed.id);
+        const checkout = openKeyCheckout(txs);
+        keyLoan = {
+          kind: 'managed_key',
+          name: managed.name,
+          status: MANAGED_KEY_STATUS_LABELS[managed.status],
+          storageLocation: managed.storageLocation,
+          checkedOut: managed.status === 'checked_out',
+          borrowerName: checkout?.borrowerNameSnapshot ?? null,
+          dueAt: checkout?.dueAt ?? null,
+        };
+      }
+    } else if (asset.targetType === 'loan_item') {
+      const item = await getLoanItemById(asset.targetId, tenantId);
+      if (item) {
+        const txs = await listItemLoanTransactions(tenantId, item.id);
+        const open = txs.find((row) => row.transactionType === 'borrow' && outstandingForBorrow(txs, row.id) > 0);
+        keyLoan = {
+          kind: 'loan_item',
+          name: item.name,
+          status: LOAN_ITEM_STATUS_LABELS[item.status],
+          storageLocation: item.storageLocation,
+          checkedOut: item.availableQuantity < item.totalQuantity,
+          borrowerName: open?.borrowerNameSnapshot ?? null,
+          dueAt: open?.dueAt ?? null,
+        };
+      }
+    }
+
+    const log = await writeScan({
+      actor,
+      tenantId,
+      code,
+      result: QR_SCAN_RESULTS.VALID,
+      asset,
+      siteId: asset.siteId,
+      at,
+      lat: latitude,
+      lng: longitude,
+    });
+    await recordQrAssetScan(asset.id, tenantId, at);
+    lastHandled.set(key, atDate.getTime());
+    await maybeAuditScan(actor, QR_SCAN_RESULTS.VALID, `掃描鑰匙／物品 QR「${asset.displayName}」`, asset.id);
+    return {
+      scanResult: QR_SCAN_RESULTS.VALID,
+      message: '掃描成功',
+      log,
+      debounced: false,
+      asset,
+      employee: null,
+      site: null,
+      keyLoan,
       deactivatedAt: null,
     };
   }
@@ -398,6 +484,7 @@ export async function scanQr(
     asset,
     employee: null,
     site: null,
+    keyLoan: null,
     deactivatedAt: null,
   };
 }

@@ -31,6 +31,12 @@ export default function DutyLayout() {
       <Stack.Screen name="parcels/index" options={{ title: '包裹領取' }} />
       <Stack.Screen name="parcels/register" options={{ title: '包裹登記' }} />
       <Stack.Screen name="parcels/[id]" options={{ title: '包裹領取簽收' }} />
+      <Stack.Screen name="vehicles/index" options={{ title: '車輛進出' }} />
+      <Stack.Screen name="parking/index" options={{ title: '車位與占用' }} />
+      <Stack.Screen name="keys/index" options={{ title: '鑰匙借還' }} />
+      <Stack.Screen name="keys/[id]" options={{ title: '鑰匙辦理' }} />
+      <Stack.Screen name="loan-items/index" options={{ title: '物品借用' }} />
+      <Stack.Screen name="loan-items/[id]" options={{ title: '物品辦理' }} />
     </Stack>
   );
 }

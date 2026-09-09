@@ -88,6 +88,18 @@ export default function DutyHome() {
       {can('parcel.pickup') || can('parcel.view') ? (
         <ListRow title="包裹領取" subtitle="簽收、照片與領取時間" onPress={() => router.push('/(main)/duty/parcels')} />
       ) : null}
+      {can('vehicleAccess.check') || can('vehicleAccess.view') ? (
+        <ListRow title="車輛進出" subtitle="訪客／臨停車輛進場與離場" onPress={() => router.push('/(main)/duty/vehicles')} />
+      ) : null}
+      {can('parkingSpace.view') || can('parkingOccupancy.manage') || can('parkingViolation.create') ? (
+        <ListRow title="車位與占用" subtitle="查車位、登記占用與異常" onPress={() => router.push('/(main)/duty/parking')} />
+      ) : null}
+      {can('key.view') || can('key.checkout') || can('key.return') ? (
+        <ListRow title="鑰匙借還" subtitle="機房、公設與備用鑰匙" onPress={() => router.push('/(main)/duty/keys')} />
+      ) : null}
+      {can('loanItem.view') || can('loanItem.borrow') || can('loanItem.return') ? (
+        <ListRow title="物品借用" subtitle="推車、雨傘、工具與會議設備" onPress={() => router.push('/(main)/duty/loan-items')} />
+      ) : null}
 
       <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginTop: spacing.lg, marginBottom: spacing.sm })}>
         本機通知
