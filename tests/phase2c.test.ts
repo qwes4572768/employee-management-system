@@ -1,3 +1,4 @@
+import { clockIn, startWorkSession } from './support/operationalClock';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -24,8 +25,8 @@ import { assignRoleToUser } from '@/services/roleService';
 import { assignUserToSite, createSite, editSite } from '@/services/siteService';
 import { configureKvStore, MemoryKvStore } from '@/services/sessionStore';
 import { createSchedule, createShiftTemplate } from '@/services/scheduleService';
-import { clockIn } from '@/services/attendanceService';
-import { startWorkSession } from '@/services/workSessionService';
+
+
 import { setMockLocationResult, resetLocationProvider } from '@/services/locationProvider';
 import { issueEmployeeQr } from '@/services/qrAssetService';
 import { createPatrolPoint } from '@/services/patrolPointService';
@@ -265,7 +266,10 @@ async function main() {
     startTime: '08:00',
     endTime: '17:00',
   });
-  const workDate = toDateOnly(new Date());
+  // Use tomorrow so the simulated 09:00 scan always follows QR creation.
+  const fixtureDay = new Date();
+  fixtureDay.setDate(fixtureDay.getDate() + 1);
+  const workDate = toDateOnly(fixtureDay);
   const guard = await createUser(admin, seeded.tenant, {
     fullName: '陳守成',
     account: 'chen.inspect',
@@ -566,9 +570,9 @@ async function main() {
 
   const home = await getInspectionHomeCard(staffActor);
   assert(home.openImprovements >= 0, 'home card');
-  const dash = await getInspectionSiteDashboard(inspectorActor, siteA.id);
+  const dash = await getInspectionSiteDashboard(inspectorActor, siteA.id, sessionAt);
   assert(dash.todayCount >= 1, 'dashboard today');
-  const snap = await getDashboardSnapshot(inspectorActor, { siteId: siteA.id });
+  const snap = await getDashboardSnapshot(inspectorActor, { siteId: siteA.id, at: sessionAt });
   assert(snap.inspectionSite, 'home inspection site live');
   assert(snap.inspectionSite?.todayCount != null, 'home not placeholder');
 

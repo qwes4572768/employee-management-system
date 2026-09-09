@@ -5,7 +5,7 @@ import { useSession } from '@/providers/SessionProvider';
 import { useTheme } from '@/theme/ThemeProvider';
 
 export default function MainLayout() {
-  const { session, user, can } = useSession();
+  const { ready, session, user, can } = useSession();
   const { colors, fontScale } = useTheme();
       const showManage =
     can('users.view') ||
@@ -42,6 +42,7 @@ export default function MainLayout() {
     can('loanItem.view') ||
     can('loanItem.manage');
 
+  if (!ready) return null;
   if (!session || user?.status !== 'active') {
     return <Redirect href="/(auth)/login" />;
   }

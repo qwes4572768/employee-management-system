@@ -205,7 +205,8 @@ export async function scanQr(
     const since = new Date(atDate.getTime() - QR_SCAN_COOLDOWN_MS).toISOString();
     const recent = await countQrScanLogsForCodeSince(tenantId, actor.userId, code, since);
     if ((memoryLast != null && atDate.getTime() - memoryLast < QR_SCAN_COOLDOWN_MS) || recent > 0) {
-      lastHandled.set(key, atDate.getTime());
+      // Camera callbacks may arrive every frame. Only a handled scan starts
+      // the cooldown; rejected frames must not postpone the next retry.
       return empty(QR_SCAN_RESULTS.INVALID, '請稍候再掃描', null, { debounced: true });
     }
   }

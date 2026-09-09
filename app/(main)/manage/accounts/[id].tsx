@@ -16,7 +16,7 @@ import { listUserRoles } from '@/repositories/permissionRepository';
 import { listUserSitePermissions } from '@/repositories/userSiteRepository';
 import { getUserById } from '@/repositories/userRepository';
 import { listRoles } from '@/repositories/roleRepository';
-import { assignRoleToUser, removeUserRoleAssignment } from '@/services/roleService';
+import { assignRoleToUser, removeUserRoleAssignment, listAssignableRoles } from '@/services/roleService';
 import { assignUserToSite, removeUserSite } from '@/services/siteService';
 import { setAccountStatus } from '@/services/userService';
 import { useTheme } from '@/theme/ThemeProvider';
@@ -31,6 +31,7 @@ export default function AccountDetailScreen() {
   const { colors, fontScale } = useTheme();
   const [user, setUser] = useState<User | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [assignableRoles, setAssignableRoles] = useState<Role[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [grants, setGrants] = useState<UserSitePermission[]>([]);
@@ -45,14 +46,15 @@ export default function AccountDetailScreen() {
     const item = await getUserById(id, tenant.id);
     setUser(item);
     setRoles(await listRoles(tenant.id));
+    setAssignableRoles(await listAssignableRoles(actor));
     setSites((await listSites(tenant.id)).filter((site) => site.status === 'active'));
     setUserRoles(await listUserRoles(id, tenant.id));
     setGrants(await listUserSitePermissions(id, tenant.id));
-  }, [id, tenant]);
+  }, [id, tenant, actor]);
 
   useFocusEffect(
     useCallback(() => {
-      void load();
+      void load().catch((err) => setError(err instanceof Error ? err.message : '讀取失敗'));
     }, [load]),
   );
 
@@ -88,10 +90,10 @@ export default function AccountDetailScreen() {
       ) : null}
       <ErrorBanner message={error} />
       {can('users.update') && user.status === 'active' ? (
-        <QinButton label="停權" variant="danger" onPress={() => void setAccountStatus(actor, user.id, 'suspended').then(load)} />
+        <QinButton label="停權" variant="danger" onPress={() => void setAccountStatus(actor, user.id, 'suspended').then(load).catch((err) => setError(err instanceof Error ? err.message : '操作失敗'))} />
       ) : null}
       {can('users.update') && user.status === 'suspended' ? (
-        <QinButton label="恢復帳號" onPress={() => void setAccountStatus(actor, user.id, 'active').then(load)} />
+        <QinButton label="恢復帳號" onPress={() => void setAccountStatus(actor, user.id, 'active').then(load).catch((err) => setError(err instanceof Error ? err.message : '操作失敗'))} />
       ) : null}
 
       <Text style={textStyle(colors, fontScale, 'lg', { fontWeight: '700', marginTop: spacing.lg, marginBottom: spacing.sm })}>
@@ -105,22 +107,22 @@ export default function AccountDetailScreen() {
               {role?.name ?? item.roleId}
               {item.isPermanent ? ' · 永久' : ''}
             </Text>
-            {can('users.assignRole') || can('users.update') ? (
+            {can('users.assignRole') ? (
               <QinButton
                 label="移除"
                 variant="ghost"
-                onPress={() => void removeUserRoleAssignment(actor, item.id, user.fullName).then(load)}
+                onPress={() => void removeUserRoleAssignment(actor, item.id, user.fullName).then(load).catch((err) => setError(err instanceof Error ? err.message : '操作失敗'))}
               />
             ) : null}
           </ButtonRow>
         );
       })}
-      {(can('users.assignRole') || can('users.update')) && roles.length > 0 ? (
+      {can('users.assignRole') && assignableRoles.length > 0 ? (
         <>
           <QinSelect
             label="指派角色"
             value={roleId}
-            options={roles.filter((r) => r.status === 'active').map((r) => ({ value: r.id, label: r.name }))}
+            options={assignableRoles.map((r) => ({ value: r.id, label: r.name }))}
             onChange={setRoleId}
           />
           <SwitchRow label="永久授權" value={permanentRole} onValueChange={setPermanentRole} />
@@ -168,7 +170,7 @@ export default function AccountDetailScreen() {
               <QinButton
                 label="移除"
                 variant="ghost"
-                onPress={() => void removeUserSite(actor, grant.id, user.fullName, site?.name ?? '案場').then(load)}
+                onPress={() => void removeUserSite(actor, grant.id, user.fullName, site?.name ?? '案場').then(load).catch((err) => setError(err instanceof Error ? err.message : '操作失敗'))}
               />
             ) : null}
           </ButtonRow>

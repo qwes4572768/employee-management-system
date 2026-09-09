@@ -29,6 +29,7 @@ import {
   editStaffingRequirement,
   getStaffingRequirement,
   listStaffingRequirements,
+  listSiteCoverages,
 } from '@/services/staffingRequirementService';
 import { formatDateTimeZh } from '@/utils/datetime';
 import { createId } from '@/utils/id';
@@ -438,6 +439,15 @@ async function main() {
   } catch (error) {
     assert(error instanceof TenantAccessError || (error instanceof Error && error.message.includes('無權')), 'tenant isolation type');
   }
+
+  const fallbackSite = await createSite(admin, { tenantId: seeded.tenant.id, siteCode: 'FALLBACK-QA', name: '通用需求驗收', address: '測試' });
+  await assignUserToSite(admin, { tenantId: seeded.tenant.id, userId: a.id, siteId: fallbackSite.id, startsAt: null, expiresAt: null, isPermanent: true, targetName: a.fullName, siteName: fallbackSite.name });
+  await createStaffingRequirement(admin, { siteId: fallbackSite.id, effectiveStartDate: '2027-01-01', requiredHeadcount: 1 });
+  await createSchedule(admin, { userId: a.id, siteId: fallbackSite.id, workDate: '2027-01-01', shiftTemplateId: day.id });
+  const fallbackCoverage = await listSiteCoverages({ tenantId: seeded.tenant.id, siteId: fallbackSite.id, startDate: '2027-01-01', endDate: '2027-01-02' });
+  assert(fallbackCoverage.filter(row => row.workDate === '2027-01-01').length === 1, 'default requirement must not invent an extra empty shift');
+  assert(fallbackCoverage.find(row => row.workDate === '2027-01-01')?.shortage === 0, 'filled shift meets default requirement');
+  assert(fallbackCoverage.find(row => row.workDate === '2027-01-02')?.shortage === 1, 'unscheduled day still reports missing staff');
 
   db.close();
   fs.unlinkSync(db.filename);

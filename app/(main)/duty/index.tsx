@@ -1,3 +1,4 @@
+import { formatDateTimeZh } from '@/utils/datetime';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Text } from 'react-native';
@@ -46,7 +47,7 @@ export default function DutyHome() {
             {currentSite?.name ?? '目前案場'}
           </Text>
           <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginTop: 4 })}>
-            開始 {session.startedAt.replace('T', ' ').slice(0, 16)} · {card?.elapsedLabel ?? ''}
+            開始 {formatDateTimeZh(session.startedAt)} · {card?.elapsedLabel ?? ''}
           </Text>
         </QinCard>
       ) : card ? (

@@ -1,3 +1,4 @@
+import { requireActorPermission, requireActiveActor } from './access';
 import { CURRENT_SITE_KEY, ROLE_KEYS } from '@/constants/app';
 import { getAppState, setAppState } from '@/repositories/appStateRepository';
 import {
@@ -30,6 +31,7 @@ import {
 } from './tenantGuard';
 
 export async function createSite(actor: ActorContext, input: Omit<SiteInsert, 'createdBy' | 'deviceId'>) {
+  await requireActorPermission(actor, 'sites.create');
   const tenantId = requireActorTenant(actor);
   assertSameTenant(tenantId, input.tenantId);
   const nameError = required(input.name, '案場名稱');
@@ -77,8 +79,10 @@ export async function editSite(
   siteId: string,
   patch: Partial<Omit<SiteInsert, 'tenantId' | 'createdBy' | 'deviceId'>>,
 ) {
+  await requireActorPermission(actor, 'sites.update');
   const tenantId = requireActorTenant(actor);
   const before = await requireSiteInTenant(siteId, tenantId);
+  await requireManageableSite(actor, siteId);
   if (patch.siteCode && patch.siteCode.trim() !== before.siteCode) {
     const duplicated = await getSiteByCode(before.tenantId, patch.siteCode);
     if (duplicated) {
@@ -101,8 +105,10 @@ export async function editSite(
 }
 
 export async function changeSiteStatus(actor: ActorContext, siteId: string, status: SiteStatus) {
+  await requireActorPermission(actor, 'sites.update');
   const tenantId = requireActorTenant(actor);
   const before = await requireSiteInTenant(siteId, tenantId);
+  await requireManageableSite(actor, siteId);
   const after = await setSiteStatus(siteId, status);
   const verb = status === 'inactive' ? '停用' : status === 'archived' ? '封存' : '啟用';
   await writeAudit({
@@ -119,12 +125,14 @@ export async function changeSiteStatus(actor: ActorContext, siteId: string, stat
   return after;
 }
 
-export async function getAuthorizedSites(user: User): Promise<Site[]> {
+export async function getAuthorizedSites(user: User, includeInactive = false): Promise<Site[]> {
+  const current = await requireUserInTenant(user.id, user.tenantId);
+  if (current.status !== 'active') return [];
   const roles = await getEffectiveRoles(user.id, user.tenantId);
   const isSuper = roles.some((role) => role.roleKey === ROLE_KEYS.SUPER_ADMIN);
   const all = await listSites(user.tenantId);
   if (isSuper) {
-    return all.filter((site) => site.status !== 'archived');
+    return all.filter((site) => includeInactive || site.status !== 'archived');
   }
   const grants = await listUserSitePermissions(user.id, user.tenantId);
   const now = new Date();
@@ -133,7 +141,14 @@ export async function getAuthorizedSites(user: User): Promise<Site[]> {
       .filter((grant) => isWithinRange(now, grant.startsAt, grant.expiresAt, grant.isPermanent))
       .map((grant) => grant.siteId),
   );
-  return all.filter((site) => allowed.has(site.id) && site.status === 'active');
+  return all.filter((site) => allowed.has(site.id) && (includeInactive || site.status === 'active'));
+}
+
+async function requireManageableSite(actor: ActorContext, siteId: string): Promise<void> {
+  const user = await requireActiveActor(actor);
+  if (!(await getAuthorizedSites(user, true)).some(site => site.id === siteId)) {
+    throw new Error('沒有管理此案場的授權');
+  }
 }
 
 export async function getCurrentSite(user: User): Promise<Site | null> {
@@ -174,10 +189,12 @@ export async function assignUserToSite(
     siteName: string;
   },
 ) {
+  await requireActorPermission(actor, 'sites.assign');
   const tenantId = requireActorTenant(actor);
   assertSameTenant(tenantId, input.tenantId);
   const user = await requireUserInTenant(input.userId, tenantId);
   const site = await requireSiteInTenant(input.siteId, tenantId);
+  await requireManageableSite(actor, site.id);
   const { record, created } = await grantSiteAccess({
     tenantId,
     userId: user.id,
@@ -211,11 +228,13 @@ export async function removeUserSite(
   targetName: string,
   siteName: string,
 ) {
+  await requireActorPermission(actor, 'sites.assign');
   const tenantId = requireActorTenant(actor);
   const grant = await getSiteGrantById(grantId, tenantId);
   if (!grant) {
     throw new Error('找不到案場授權');
   }
+  await requireManageableSite(actor, grant.siteId);
   await revokeSiteAccess(grant.id, tenantId);
   await writeAudit({
     actor,

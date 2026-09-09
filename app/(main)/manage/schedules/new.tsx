@@ -1,3 +1,4 @@
+import { formatDateTimeZh , formatTimeZh } from '@/utils/datetime';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Text } from 'react-native';
@@ -114,8 +115,8 @@ export default function NewScheduleScreen() {
           <Text style={textStyle(colors, fontScale, 'sm', { marginTop: 4 })}>{w.message}</Text>
           {w.overlap ? (
             <Text style={textStyle(colors, fontScale, 'xs', { color: colors.textMuted, marginTop: 6 })}>
-              既有：{w.overlap.existingSiteName} {w.overlap.existingStartAt.replace('T', ' ').slice(0, 16)}～{w.overlap.existingEndAt.slice(11, 16)}
-              {'\n'}本次：{w.overlap.newSiteName} {w.overlap.newStartAt.replace('T', ' ').slice(0, 16)}～{w.overlap.newEndAt.replace('T', ' ').slice(0, 16)}
+              既有：{w.overlap.existingSiteName} {formatDateTimeZh(w.overlap.existingStartAt)}～{formatTimeZh(w.overlap.existingEndAt)}
+              {'\n'}本次：{w.overlap.newSiteName} {formatDateTimeZh(w.overlap.newStartAt)}～{formatDateTimeZh(w.overlap.newEndAt)}
               {'\n'}重疊：{w.overlap.overlapMinutes} 分鐘
             </Text>
           ) : null}

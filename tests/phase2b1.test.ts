@@ -1,3 +1,4 @@
+import { clockIn, startWorkSession } from './support/operationalClock';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -23,8 +24,8 @@ import { assignRoleToUser } from '@/services/roleService';
 import { assignUserToSite, createSite } from '@/services/siteService';
 import { configureKvStore, MemoryKvStore } from '@/services/sessionStore';
 import { createSchedule, createShiftTemplate } from '@/services/scheduleService';
-import { clockIn } from '@/services/attendanceService';
-import { startWorkSession } from '@/services/workSessionService';
+
+
 import { setMockLocationResult, resetLocationProvider } from '@/services/locationProvider';
 import {
   deactivateQrAssetByActor,

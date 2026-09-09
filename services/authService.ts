@@ -1,3 +1,5 @@
+import { getDatabase } from '@/database/runtime';
+import { requireActorPermission, requireActiveActor, requireCanManageUser, requirePermanentAdministrator } from './access';
 import { countTenants } from '@/repositories/tenantRepository';
 import {
   findAccountGlobally,
@@ -202,6 +204,7 @@ export async function changeOwnProfile(
     photoUri?: string | null;
   },
 ): Promise<User> {
+  await requireActiveActor(actor);
   const tenantId = requireActorTenant(actor);
   if (actor.userId !== userId) {
     throw new Error('只能修改本人資料');
@@ -255,6 +258,7 @@ export async function changeOwnPassword(
   nextPassword: string,
   confirmPassword: string,
 ): Promise<void> {
+  await requireActiveActor(actor);
   const tenantId = requireActorTenant(actor);
   if (actor.userId !== userId) {
     throw new Error('只能修改本人密碼');
@@ -298,9 +302,15 @@ export async function reviewAccount(
   decision: Extract<UserStatus, 'active' | 'returned' | 'rejected'>,
   reviewNote: string | null,
 ): Promise<User> {
+  await requireActorPermission(actor, 'accounts.approve');
   const tenantId = requireActorTenant(actor);
   const before = await requireUserInTenant(userId, tenantId);
-  const after = await updateUserStatus(userId, decision, reviewNote);
+  await requireCanManageUser(actor, userId);
+  const after = await getDatabase().withTransaction(async () => {
+    const updated = await updateUserStatus(userId, decision, reviewNote);
+    await requirePermanentAdministrator(tenantId);
+    return updated;
+  });
   const verb = decision === 'active' ? '開通' : decision === 'returned' ? '退回' : '拒絕';
   await writeAudit({
     actor,

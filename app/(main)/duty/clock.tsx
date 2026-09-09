@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Text } from 'react-native';
 
@@ -14,7 +14,7 @@ import { ActiveSessionConflictError, endWorkSession, getActiveWorkSession, start
 import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
-import { toDateOnly } from '@/utils/datetime';
+import { toDateOnly , formatDateTimeZh , formatTimeZh } from '@/utils/datetime';
 import type { WorkSchedule, WorkSession } from '@/types';
 
 export default function ClockScreen() {
@@ -26,6 +26,7 @@ export default function ClockScreen() {
   const [today, setToday] = useState<WorkSchedule[]>([]);
   const [scheduleId, setScheduleId] = useState('');
   const [loading, setLoading] = useState(false);
+  const siteSchedules = today.filter((row) => row.siteId === currentSite?.id && ['scheduled', 'confirmed'].includes(row.status));
 
   const load = useCallback(async () => {
     if (!actor.tenantId || !actor.userId) return;
@@ -62,16 +63,16 @@ export default function ClockScreen() {
         label="目前案場"
         value={currentSite?.id ?? ''}
         options={authorizedSites.map((site) => ({ value: site.id, label: site.name }))}
-        onChange={(id) => void selectSite(id)}
+        onChange={(id) => { setScheduleId(''); void selectSite(id); }}
       />
-      {today.length > 0 ? (
+      {siteSchedules.length > 0 ? (
         <QinSelect
           label="今日排班"
           value={scheduleId}
-          options={today.map((item) => ({
+          options={[{ value: '', label: '不連結班表（臨時勤務）' }, ...siteSchedules.map((item) => ({
             value: item.id,
-            label: `${item.scheduledStartAt.slice(11, 16)}～${item.scheduledEndAt.slice(11, 16)}`,
-          }))}
+            label: `${formatTimeZh(item.scheduledStartAt)}～${formatTimeZh(item.scheduledEndAt)}`,
+          }))]}
           onChange={setScheduleId}
         />
       ) : (
@@ -83,17 +84,21 @@ export default function ClockScreen() {
         <QinCard style={{ marginBottom: spacing.md }}>
           <Text style={textStyle(colors, fontScale, 'md', { fontWeight: '800', color: colors.accent })}>勤務中</Text>
           <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginTop: 4 })}>
-            開始時間 {session.startedAt.replace('T', ' ').slice(0, 16)}
+            開始時間 {formatDateTimeZh(session.startedAt)}
           </Text>
         </QinCard>
       ) : null}
       {can('attendance.clock') ? (
         <QinButton
-          label="GPS 上班打卡"
+          label={currentSite?.requireSiteQr ? '掃描案場 QR 上班打卡' : '上班打卡'}
           loading={loading}
           onPress={() =>
             void run(async () => {
               if (!currentSite) throw new Error('請先選擇案場');
+              if (currentSite.requireSiteQr) {
+                router.push({ pathname: '/duty/scan', params: { clock: 'in', siteId: currentSite.id, scheduleId } });
+                return;
+              }
               try {
                 await clockIn(actor, { siteId: currentSite.id, scheduleId: scheduleId || null });
                 setInfo('上班打卡完成');
@@ -107,7 +112,7 @@ export default function ClockScreen() {
       ) : null}
       {can('workSession.start') || can('workSession.startUnscheduled') ? (
         <QinButton
-          label={today.length === 0 ? '開始臨時勤務' : '開始勤務'}
+          label={!scheduleId ? '開始臨時勤務' : '開始勤務'}
           variant="secondary"
           loading={loading}
           onPress={() =>
@@ -143,12 +148,16 @@ export default function ClockScreen() {
       ) : null}
       {can('attendance.clock') ? (
         <QinButton
-          label="GPS 下班打卡"
+          label={currentSite?.requireSiteQr ? '掃描案場 QR 下班打卡' : '下班打卡'}
           variant="secondary"
           loading={loading}
           onPress={() =>
             void run(async () => {
               if (!currentSite) throw new Error('請先選擇案場');
+              if (currentSite.requireSiteQr) {
+                router.push({ pathname: '/duty/scan', params: { clock: 'out', siteId: currentSite.id } });
+                return;
+              }
               await clockOut(actor, { siteId: currentSite.id });
               setInfo('下班打卡完成');
             })

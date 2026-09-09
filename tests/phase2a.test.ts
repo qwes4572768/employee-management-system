@@ -1,3 +1,4 @@
+import { clockIn, startWorkSession, endWorkSession } from './support/operationalClock';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -27,8 +28,8 @@ import {
   ScheduleDecisionError,
   setUserStaffingMode,
 } from '@/services/scheduleService';
-import { evaluateAttendanceStatus, clockIn, requestAttendanceCorrection, reviewAttendanceCorrection } from '@/services/attendanceService';
-import { startWorkSession, endWorkSession } from '@/services/workSessionService';
+import { evaluateAttendanceStatus, requestAttendanceCorrection, reviewAttendanceCorrection } from '@/services/attendanceService';
+
 import {
   attachLeaveFile,
   getLeaveAttachmentForViewer,

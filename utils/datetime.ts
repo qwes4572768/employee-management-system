@@ -2,6 +2,12 @@ export function nowIso(): string {
   return new Date().toISOString();
 }
 
+export function formatTimeZh(value: string | Date): string {
+  const date = typeof value === 'string' ? new Date(value) : value;
+  if (Number.isNaN(date.getTime())) return '—';
+  return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
 export function formatDateTimeZh(value: string | Date): string {
   const date = typeof value === 'string' ? new Date(value) : value;
   if (Number.isNaN(date.getTime())) {

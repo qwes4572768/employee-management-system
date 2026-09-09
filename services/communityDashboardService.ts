@@ -31,8 +31,8 @@ export async function getCommunityHomeCard(
   const parcels = await listParcels(tenantId, { siteId });
   return {
     visitorsOnSite: livePasses.filter((item) => item.status === 'checked_in').length,
-    visitorsToday: passes.filter((item) => item.createdAt.startsWith(today)).length,
+    visitorsToday: passes.filter((item) => toDateOnly(new Date(item.createdAt)) === today).length,
     parcelsWaiting: parcels.filter((item) => item.status === 'registered' || item.status === 'notified').length,
-    parcelsToday: parcels.filter((item) => item.registeredAt.startsWith(today)).length,
+    parcelsToday: parcels.filter((item) => toDateOnly(new Date(item.registeredAt)) === today).length,
   };
 }

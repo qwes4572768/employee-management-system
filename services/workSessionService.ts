@@ -1,3 +1,4 @@
+import { operationalNowIso } from './clockProvider';
 import {
   getActiveWorkSession,
   getWorkSessionById,
@@ -33,13 +34,14 @@ export async function startWorkSession(
     scheduleId?: string | null;
     unscheduled?: boolean;
     note?: string | null;
-    at?: string;
+   
   },
 ): Promise<WorkSession> {
   const tenantId = requireActorTenant(actor);
   if (!actor.userId) throw new Error('缺少操作者');
   const user = await requireUserInTenant(actor.userId, tenantId);
   const site = await requireSiteInTenant(input.siteId, tenantId);
+  if (site.status !== 'active') throw new Error('此案場已停用');
   if (!(await userHasSiteAuthorization(user.id, tenantId, site.id))) {
     throw new Error('沒有此案場授權');
   }
@@ -47,7 +49,7 @@ export async function startWorkSession(
   if (active) {
     const currentSite = await getSiteById(active.siteId, tenantId);
     const started = new Date(active.startedAt);
-    const elapsed = minutesBetween(started, new Date(input.at ?? nowIso()));
+    const elapsed = minutesBetween(started, new Date(operationalNowIso()));
     throw new ActiveSessionConflictError(
       `您目前仍在「${currentSite?.name ?? '其他案場'}」勤務中。\n開始時間：${formatDateTimeZh(active.startedAt)}\n勤務時間：${formatDurationZh(elapsed)}`,
       active,
@@ -60,6 +62,13 @@ export async function startWorkSession(
     if (existing) throw new TenantAccessError();
     throw new Error('找不到排班');
   }
+  if (schedule && (schedule.userId !== user.id || schedule.siteId !== site.id)) {
+    throw new Error('只能使用自己在目前案場的班表開始勤務');
+  }
+  if (schedule && !['scheduled', 'confirmed'].includes(schedule.status)) {
+    throw new Error('此班表已取消或完成，不能開始勤務');
+  }
+  if (schedule && input.unscheduled) throw new Error('臨時勤務不可連結排班');
   const unscheduled = Boolean(input.unscheduled) || !schedule;
   if (unscheduled) {
     await requireActorPermission(actor, 'workSession.startUnscheduled');
@@ -67,7 +76,7 @@ export async function startWorkSession(
     await requireActorPermission(actor, 'workSession.start');
   }
   const attendance = await getOpenAttendance(tenantId, user.id, site.id);
-  const startedAt = input.at ?? nowIso();
+  const startedAt = operationalNowIso();
   let session: WorkSession;
   try {
     session = await insertWorkSession({
@@ -114,7 +123,7 @@ export async function startWorkSession(
 
 export async function endWorkSession(
   actor: ActorContext,
-  input?: { sessionId?: string; at?: string; note?: string | null },
+  input?: { sessionId?: string; note?: string | null },
 ): Promise<{ session: WorkSession; missingClockOut: boolean }> {
   const tenantId = requireActorTenant(actor);
   await requireActorPermission(actor, 'workSession.end');
@@ -136,7 +145,7 @@ export async function endWorkSession(
   if (session.status !== 'active') {
     throw new Error('此勤務已結束');
   }
-  const endedAt = input?.at ?? nowIso();
+  const endedAt = operationalNowIso();
   const updated = await updateWorkSession(session.id, tenantId, {
     endedAt,
     endMethod: 'manual',

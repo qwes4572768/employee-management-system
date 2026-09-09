@@ -1,3 +1,5 @@
+import { getDatabase } from '@/database/runtime';
+import { requireActorPermission, actorPermissionKeys, actorIsSuperAdmin, requireCanManageUser, requirePermanentAdministrator } from './access';
 import { ROLE_KEYS } from '@/constants/app';
 import { permissionIdForKey } from '@/database/migrations';
 import {
@@ -29,6 +31,7 @@ export async function createCustomRole(
   actor: ActorContext,
   input: { tenantId: string; name: string; description?: string },
 ): Promise<Role> {
+  await requireActorPermission(actor, 'roles.create');
   const tenantId = requireActorTenant(actor);
   assertSameTenant(tenantId, input.tenantId);
   const nameError = required(input.name, '角色名稱');
@@ -58,8 +61,10 @@ export async function createCustomRole(
 }
 
 export async function renameRole(actor: ActorContext, roleId: string, name: string, description?: string | null) {
+  await requireActorPermission(actor, 'roles.update');
   const tenantId = requireActorTenant(actor);
   const before = await requireRoleInTenant(roleId, tenantId);
+  await requireRoleWithinAuthority(actor, before);
   const after = await updateRole(roleId, { name, description });
   await writeAudit({
     actor,
@@ -76,8 +81,10 @@ export async function renameRole(actor: ActorContext, roleId: string, name: stri
 }
 
 export async function setRoleStatus(actor: ActorContext, roleId: string, status: EntityStatus) {
+  await requireActorPermission(actor, 'roles.update');
   const tenantId = requireActorTenant(actor);
   const before = await requireRoleInTenant(roleId, tenantId);
+  await requireRoleWithinAuthority(actor, before);
   if (before.isSystem && status !== 'active') {
     throw new Error('系統角色不可停用');
   }
@@ -102,6 +109,7 @@ export async function updateRolePermissionSet(
   roleId: string,
   permKeys: string[],
 ) {
+  const keys = await requireActorPermission(actor, 'permissions.update');
   const actorTenant = requireActorTenant(actor);
   assertSameTenant(actorTenant, tenantId);
   const role = await requireRoleInTenant(roleId, actorTenant);
@@ -109,6 +117,9 @@ export async function updateRolePermissionSet(
     throw new Error('企業總管理員權限不可縮減');
   }
   const before = await listRolePermissionKeys(roleId, actorTenant);
+  if (!(await actorIsSuperAdmin(actor)) && [...before, ...permKeys].some(key => !keys.includes(key))) {
+    throw new Error('不可設定超過自己授權範圍的角色權限');
+  }
   await setRolePermissions(actorTenant, roleId, permKeys);
   const after = await listRolePermissionKeys(roleId, actorTenant);
   await writeAudit({
@@ -137,19 +148,27 @@ export async function assignRoleToUser(
     roleName: string;
   },
 ) {
+  await requireActorPermission(actor, 'users.assignRole');
   const tenantId = requireActorTenant(actor);
   assertSameTenant(tenantId, input.tenantId);
   const user = await requireUserInTenant(input.userId, tenantId);
   const role = await requireRoleInTenant(input.roleId, tenantId);
-  const { record, created } = await assignUserRole({
-    tenantId,
-    userId: user.id,
-    roleId: role.id,
-    startsAt: input.startsAt,
-    expiresAt: input.expiresAt,
-    isPermanent: input.isPermanent,
-    createdBy: actor.userId,
-    deviceId: actor.deviceId,
+  await requireCanManageUser(actor, user.id);
+  if (role.status !== 'active') throw new Error('不可指派停用角色');
+  await requireGrantableRole(actor, role);
+  const { record, created } = await getDatabase().withTransaction(async () => {
+    const result = await assignUserRole({
+      tenantId,
+      userId: user.id,
+      roleId: role.id,
+      startsAt: input.startsAt,
+      expiresAt: input.expiresAt,
+      isPermanent: input.isPermanent,
+      createdBy: actor.userId,
+      deviceId: actor.deviceId,
+    });
+    await requirePermanentAdministrator(tenantId);
+    return result;
   });
   const at = formatDateTimeZh(nowIso());
   await writeAudit({
@@ -168,12 +187,18 @@ export async function assignRoleToUser(
 }
 
 export async function removeUserRoleAssignment(actor: ActorContext, assignmentId: string, targetName: string) {
+  await requireActorPermission(actor, 'users.assignRole');
   const tenantId = requireActorTenant(actor);
   const assignment = await getUserRoleById(assignmentId, tenantId);
   if (!assignment) {
     throw new Error('找不到角色授權');
   }
-  await revokeUserRole(assignment.id, tenantId);
+  await requireCanManageUser(actor, assignment.userId);
+  await requireGrantableRole(actor, await requireRoleInTenant(assignment.roleId, tenantId));
+  await getDatabase().withTransaction(async () => {
+    await revokeUserRole(assignment.id, tenantId);
+    await requirePermanentAdministrator(tenantId);
+  });
   await writeAudit({
     actor,
     action: 'update',
@@ -198,9 +223,13 @@ export async function addUserPermissionOverride(
     targetName: string;
   },
 ) {
+  await requireActorPermission(actor, 'permissions.update');
   const tenantId = requireActorTenant(actor);
   assertSameTenant(tenantId, input.tenantId);
   const user = await requireUserInTenant(input.userId, tenantId);
+  await requireCanManageUser(actor, user.id);
+  const keys = await requireActorPermission(actor, 'permissions.update');
+  if (!keys.includes(input.permKey)) throw new Error('不可設定超過自己授權範圍的個別權限');
   const { record, created } = await insertPermissionOverride({
     tenantId,
     userId: user.id,
@@ -229,4 +258,34 @@ export async function addUserPermissionOverride(
   return record;
 }
 
+async function requireGrantableRole(actor: ActorContext, role: Role): Promise<void> {
+  await requireActorPermission(actor, 'users.assignRole');
+  await requireRoleWithinAuthority(actor, role);
+}
+
+export async function listAssignableRoles(actor: ActorContext): Promise<Role[]> {
+  const keys = await actorPermissionKeys(actor);
+  if (!keys.includes('users.assignRole')) return [];
+  const roles = (await listRoles(requireActorTenant(actor))).filter(role => role.status === 'active');
+  if (await actorIsSuperAdmin(actor)) return roles;
+  const allowed: Role[] = [];
+  for (const role of roles) {
+    if (role.roleKey !== ROLE_KEYS.SUPER_ADMIN &&
+        (await listRolePermissionKeys(role.id, role.tenantId)).every(key => keys.includes(key))) {
+      allowed.push(role);
+    }
+  }
+  return allowed;
+}
+
+async function requireRoleWithinAuthority(actor: ActorContext, role: Role): Promise<void> {
+  if (await actorIsSuperAdmin(actor)) return;
+  const keys = await actorPermissionKeys(actor);
+  const roleKeys = await listRolePermissionKeys(role.id, role.tenantId);
+  if (role.roleKey === ROLE_KEYS.SUPER_ADMIN || roleKeys.some(key => !keys.includes(key))) {
+    throw new Error('不可指派或移除權限高於自己的角色');
+  }
+}
+
 export { listRoles, getRoleById, listRolePermissionKeys, listPermissions, listUserOverrides };
+

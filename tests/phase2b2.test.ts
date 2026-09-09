@@ -1,3 +1,4 @@
+import { startWorkSession, endWorkSession } from './support/operationalClock';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -25,7 +26,7 @@ import { assignRoleToUser } from '@/services/roleService';
 import { assignUserToSite, createSite } from '@/services/siteService';
 import { configureKvStore, MemoryKvStore } from '@/services/sessionStore';
 import { createSchedule, createShiftTemplate } from '@/services/scheduleService';
-import { startWorkSession, endWorkSession } from '@/services/workSessionService';
+
 import { setMockLocationResult, resetLocationProvider } from '@/services/locationProvider';
 import { createPatrolPoint } from '@/services/patrolPointService';
 import { addPatrolTemplatePoint, createPatrolTemplate, updatePatrolTemplateByActor } from '@/services/patrolTemplateService';

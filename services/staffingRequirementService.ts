@@ -178,9 +178,15 @@ export async function listSiteCoverages(input: {
   let cursor = input.startDate;
   while (cursor <= input.endDate) {
     const requirements = await listActiveStaffingRequirementsForSiteDate(input.tenantId, site.id, cursor);
-    for (const item of requirements) {
-      if (!matchesWeekday(item, cursor)) continue;
-      remember(cursor, item.shiftTemplateId);
+    const applicable = requirements.filter((item) => matchesWeekday(item, cursor));
+    for (const item of applicable) {
+      if (item.shiftTemplateId) remember(cursor, item.shiftTemplateId);
+    }
+    // An unspecified requirement is the default for real shifts, not an
+    // additional empty shift that creates a second, artificial shortage.
+    if (applicable.some((item) => item.shiftTemplateId == null) &&
+        !slots.some((slot) => slot.workDate === cursor)) {
+      remember(cursor, null);
     }
     const next = parseDateOnly(cursor);
     if (!next) break;

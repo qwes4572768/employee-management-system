@@ -217,7 +217,7 @@ export async function verifyInspectionScene(input: {
     'clock_in',
     '上班打卡',
     duty?.attendance?.clockInAt ? INSPECTION_CHECK_LEVELS.NORMAL : INSPECTION_CHECK_LEVELS.WARNING,
-    duty?.attendance?.clockInAt ? `已打卡 ${duty.attendance.clockInAt.replace('T', ' ').slice(0, 16)}` : '尚未上班打卡',
+    duty?.attendance?.clockInAt ? `已打卡 ${formatDateTimeZh(duty.attendance.clockInAt)}` : '尚未上班打卡',
   );
   push(
     'work_session',

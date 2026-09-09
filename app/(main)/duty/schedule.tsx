@@ -15,7 +15,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
 import { addDays } from '@/utils/scheduleTime';
-import { toDateOnly } from '@/utils/datetime';
+import { toDateOnly , formatDateTimeZh , formatTimeZh } from '@/utils/datetime';
 import type { WorkSchedule, WorkforceWarning } from '@/types';
 
 type RangeKey = 'today' | 'week' | 'month';
@@ -111,8 +111,8 @@ export default function MyScheduleScreen() {
                 {row.schedule.workDate} · {row.siteName}
               </Text>
               <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginTop: 4 })}>
-                {row.shiftName} · {row.schedule.scheduledStartAt.replace('T', ' ').slice(0, 16)}～
-                {row.schedule.scheduledEndAt.replace('T', ' ').slice(11, 16)}
+                {row.shiftName} · {formatDateTimeZh(row.schedule.scheduledStartAt)}～
+                {formatTimeZh(row.schedule.scheduledEndAt)}
               </Text>
               <Text style={textStyle(colors, fontScale, 'sm', { color: colors.accent, marginTop: 4 })}>
                 {typeLabel} · {row.schedule.status}

@@ -20,7 +20,7 @@ import { useTheme } from '@/theme/ThemeProvider';
 import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
 import { addDays } from '@/utils/scheduleTime';
-import { toDateOnly } from '@/utils/datetime';
+import { toDateOnly , formatTimeZh } from '@/utils/datetime';
 import type { ShiftCoverage, WorkSchedule, WorkforceWarning } from '@/types';
 
 type RangeKey = 'today' | 'week' | 'month';
@@ -130,7 +130,7 @@ export default function ScheduleBoardScreen() {
               {row.userName} · {row.siteName}
             </Text>
             <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginTop: 4 })}>
-              {row.schedule.workDate} {row.schedule.scheduledStartAt.slice(11, 16)}～{row.schedule.scheduledEndAt.slice(11, 16)}
+              {row.schedule.workDate} {formatTimeZh(row.schedule.scheduledStartAt)}～{formatTimeZh(row.schedule.scheduledEndAt)}
               {row.schedule.leaveStatus === 'leave_approved' ? ' · 已核准請假' : ''}
             </Text>
             {coverage ? <CoverageBadge coverage={coverage} unsetLabel={UNSET_STAFFING_REQUIREMENT_LABEL} /> : null}

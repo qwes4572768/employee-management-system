@@ -47,11 +47,11 @@ export async function getInspectionSiteDashboard(
   const site = await getSiteById(siteId, tenantId);
   const today = toDateOnly(at);
   const sessions = (await listInspectionSessions(tenantId, { siteId })).filter(
-    (item) => item.startedAt.startsWith(today) && item.status !== 'cancelled' && item.status !== 'voided',
+    (item) => toDateOnly(new Date(item.startedAt)) === today && item.status !== 'cancelled' && item.status !== 'voided',
   );
   const evaluations = (await listInspectionEvaluations(tenantId, { siteId })).filter((item) => {
     if (item.status !== 'completed') return false;
-    return item.createdAt.startsWith(today);
+    return toDateOnly(new Date(item.createdAt)) === today;
   });
   const scores = evaluations.map((item) => item.weightedScore);
   const averageScore = scores.length ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10 : null;

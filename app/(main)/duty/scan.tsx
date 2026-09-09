@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Platform, Text, View } from 'react-native';
 
 import { Screen } from '@/components/layout/Screen';
 import { Avatar } from '@/components/ui/Avatar';
-import { ErrorBanner } from '@/components/ui/Banners';
+import { ErrorBanner, InfoBanner } from '@/components/ui/Banners';
+import { clockIn, clockOut } from '@/services/attendanceService';
 import { QinButton } from '@/components/ui/QinButton';
 import { QinCard } from '@/components/ui/QinCard';
 import { QinInput } from '@/components/ui/QinInput';
@@ -21,12 +22,16 @@ import { spacing } from '@/theme/tokens';
 import { textStyle } from '@/theme/typography';
 import { formatDateTimeZh, formatDateZh } from '@/utils/datetime';
 import type { QrScanOutcome } from '@/types';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 
 type ExpoCameraView = typeof import('expo-camera').CameraView;
 let CameraView: ExpoCameraView | null = null;
 
 export default function QrScanScreen() {
+  const params = useLocalSearchParams<{ clock?: string; siteId?: string; scheduleId?: string }>();
+  const attendanceMode = params.clock === 'in' || params.clock === 'out';
+  const pendingScan = useRef(false);
+  const [completed, setCompleted] = useState(false);
   const { actor } = useSession();
   const { colors, fontScale } = useTheme();
   const { isTablet, landscape } = useResponsive();
@@ -49,18 +54,37 @@ export default function QrScanScreen() {
       });
   }, []);
 
+  const resetScan = useCallback(() => {
+    setCompleted(false);
+    setError(null);
+    setOutcome(null);
+    setManual('');
+  }, []);
+  useEffect(resetScan, [resetScan, params.clock, params.siteId, params.scheduleId]);
   useFocusEffect(
     useCallback(() => {
+      resetScan();
       void getCameraPermissionState().then(setPermission);
-    }, []),
+    }, [resetScan]),
   );
 
   const handleCode = useCallback(
     async (code: string) => {
-      if (!code.trim() || busy) return;
+      if (!code.trim() || pendingScan.current || completed) return;
+      pendingScan.current = true;
       setBusy(true);
       setError(null);
       try {
+        if (attendanceMode) {
+          if (!params.siteId) throw new Error('請返回打卡頁選擇案場');
+          if (params.clock === 'in') {
+            await clockIn(actor, { siteId: params.siteId, scheduleId: params.scheduleId || null, siteQrCode: code });
+          } else {
+            await clockOut(actor, { siteId: params.siteId, siteQrCode: code });
+          }
+          setCompleted(true);
+          return;
+        }
         const result = await scanQr(actor, code);
         if (!result.debounced) {
           setOutcome(result);
@@ -68,15 +92,16 @@ export default function QrScanScreen() {
       } catch (err) {
         setError(err instanceof Error ? err.message : '掃描失敗');
       } finally {
+        pendingScan.current = false;
         setBusy(false);
       }
     },
-    [actor, busy],
+    [actor, attendanceMode, completed, params.clock, params.scheduleId, params.siteId],
   );
 
   const cameraBlock = (
     <View style={{ flex: 1, minHeight: 240, borderRadius: 12, overflow: 'hidden', backgroundColor: '#000' }}>
-      {permission === 'granted' && cameraReady && CameraView ? (
+      {!completed && permission === 'granted' && cameraReady && CameraView ? (
         <CameraView
           style={{ flex: 1, minHeight: 240 }}
           facing="back"
@@ -106,6 +131,7 @@ export default function QrScanScreen() {
   const resultBlock = (
     <View style={{ flex: isTablet || landscape ? 1 : undefined }}>
       <ErrorBanner message={error} />
+      {completed ? <><InfoBanner message={params.clock === 'in' ? '上班打卡完成' : '下班打卡完成'} /><QinButton label="返回打卡頁" onPress={() => router.back()} /></> : null}
       <QinInput label="無法使用相機時可手動輸入 QR" value={manual} onChangeText={setManual} autoCapitalize="none" />
       <QinButton label="識別" loading={busy} onPress={() => void handleCode(manual)} />
       {outcome ? <ScanResultCard outcome={outcome} /> : null}
@@ -115,7 +141,7 @@ export default function QrScanScreen() {
   return (
     <Screen scroll={!isTablet && !landscape} padded>
       <Text style={textStyle(colors, fontScale, 'sm', { color: colors.textMuted, marginBottom: spacing.md })}>
-        QR 只用來識別資產，查看資料仍須登入與權限。
+        {attendanceMode ? '掃描目前案場的 QR 後完成打卡；需要定位的案場仍會驗證 GPS。' : 'QR 只用來識別資產，查看資料仍須登入與權限。'}
       </Text>
       <View style={{ flexDirection: isTablet || landscape ? 'row' : 'column', gap: spacing.md, flex: 1 }}>
         <View style={{ flex: isTablet || landscape ? 1 : undefined, minHeight: Platform.OS === 'web' ? 280 : 240 }}>

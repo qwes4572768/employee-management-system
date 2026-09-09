@@ -1,3 +1,4 @@
+import { requireActorPermission } from './access';
 import { getTenantById, updateTenant } from '@/repositories/tenantRepository';
 import type { Tenant } from '@/types';
 import { formatDateTimeZh, nowIso } from '@/utils/datetime';
@@ -19,6 +20,7 @@ export async function editTenant(
     industryType: string | null;
   }>,
 ): Promise<Tenant> {
+  await requireActorPermission(actor, 'tenants.update');
   const actorTenant = requireActorTenant(actor);
   assertSameTenant(actorTenant, tenantId);
   const before = await getTenantById(tenantId);

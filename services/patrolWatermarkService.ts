@@ -1,3 +1,4 @@
+import { formatDateTimeZh } from '@/utils/datetime';
 export interface PatrolWatermarkInput {
   originalUri: string;
   siteName: string;
@@ -20,7 +21,7 @@ export function buildPatrolWatermarkText(input: PatrolWatermarkInput): string {
     input.latitude != null && input.longitude != null
       ? `${input.latitude.toFixed(6)}, ${input.longitude.toFixed(6)}`
       : '無 GPS';
-  return ['勤管系統', input.siteName, input.pointName, input.personName, input.capturedAt.replace('T', ' ').slice(0, 16), gps].join(
+  return ['勤管系統', input.siteName, input.pointName, input.personName, formatDateTimeZh(input.capturedAt), gps].join(
     ' / ',
   );
 }

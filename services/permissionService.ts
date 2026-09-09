@@ -7,6 +7,7 @@ import {
   listUserRoles,
 } from '@/repositories/permissionRepository';
 import { getRoleById, listRoles } from '@/repositories/roleRepository';
+import { getUserById } from '@/repositories/userRepository';
 import type { Role, User } from '@/types';
 import { isWithinRange } from '@/utils/datetime';
 
@@ -30,6 +31,8 @@ export async function getEffectiveRoles(userId: string, tenantId: string): Promi
 }
 
 export async function getEffectivePermissionKeys(user: User): Promise<string[]> {
+  const current = await getUserById(user.id, user.tenantId);
+  if (!current || current.status !== 'active') return [];
   const roles = await getEffectiveRoles(user.id, user.tenantId);
   if (roles.some((role) => role.roleKey === ROLE_KEYS.SUPER_ADMIN)) {
     return listAllPermissionKeys();

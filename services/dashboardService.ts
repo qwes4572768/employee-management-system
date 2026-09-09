@@ -113,7 +113,7 @@ export async function getPersonDutyCard(
     attendanceList.find(
       (item) =>
         (schedule && item.scheduleId === schedule.id) ||
-        (item.clockInAt?.startsWith(today) ?? false),
+        (item.clockInAt ? toDateOnly(new Date(item.clockInAt)) === today : false),
     ) ?? null;
   const session = await getActiveWorkSession(tenantId, user.id);
   return enrich(user, site ?? (session ? await getSiteById(session.siteId, tenantId) : null), schedule, attendance, session, at);
@@ -184,7 +184,7 @@ export async function getDashboardSnapshot(
   const mySchedule = mySchedules.find((item) => item.status !== 'cancelled') ?? null;
   const myAttendanceList = await listAttendanceForUser(tenantId, self.id);
   const myAttendance =
-    myAttendanceList.find((item) => (mySchedule && item.scheduleId === mySchedule.id) || (site && item.siteId === site.id && item.clockInAt?.startsWith(today))) ??
+    myAttendanceList.find((item) => (mySchedule && item.scheduleId === mySchedule.id) || (site && item.siteId === site.id && (item.clockInAt && toDateOnly(new Date(item.clockInAt)) === today))) ??
     myAttendanceList[0] ??
     null;
   const mySession = await getActiveWorkSession(tenantId, self.id);

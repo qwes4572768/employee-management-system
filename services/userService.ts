@@ -1,3 +1,5 @@
+import { getDatabase } from '@/database/runtime';
+import { requireActorPermission, requireCanManageUser, requirePermanentAdministrator } from './access';
 import { listUsersByStatus, listUsersByTenant, getUserById, updateUserStatus } from '@/repositories/userRepository';
 import { listUserRoles } from '@/repositories/permissionRepository';
 import { listUserSitePermissions } from '@/repositories/userSiteRepository';
@@ -33,9 +35,18 @@ export async function setAccountStatus(
   userId: string,
   status: Extract<UserStatus, 'active' | 'suspended'>,
 ): Promise<User> {
+  await requireActorPermission(actor, 'users.update');
   const tenantId = requireActorTenant(actor);
   const before = await requireUserInTenant(userId, tenantId);
-  const after = await updateUserStatus(userId, status, before.reviewNote);
+  if (before.status !== 'active' && before.status !== 'suspended') {
+    throw new Error('待審、退回或拒絕的帳號必須由帳號審核流程開通');
+  }
+  await requireCanManageUser(actor, userId);
+  const after = await getDatabase().withTransaction(async () => {
+    const updated = await updateUserStatus(userId, status, before.reviewNote);
+    await requirePermanentAdministrator(tenantId);
+    return updated;
+  });
   const verb = status === 'suspended' ? '停權' : '恢復';
   await writeAudit({
     actor,

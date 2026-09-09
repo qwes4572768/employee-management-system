@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
@@ -20,6 +20,7 @@ import type { Role, SessionPayload, Site, Tenant, User } from '@/types';
 
 export interface SessionContextValue {
   ready: boolean;
+  initializationError: string | null;
   bootstrapComplete: boolean;
   session: SessionPayload | null;
   user: User | null;
@@ -77,6 +78,8 @@ const deviceKv: KvStore = {
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [ready, setReady] = useState(false);
+  const [initializationError, setInitializationError] = useState<string | null>(null);
+  const refreshing = useRef<Promise<void> | null>(null);
   const [bootstrapComplete, setBootstrapComplete] = useState(false);
   const [session, setSession] = useState<SessionPayload | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -96,75 +99,91 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     appVersion: '1.0.0',
   });
 
-  const refresh = useCallback(async () => {
-    configureKvStore(deviceKv);
-    await initializeAppDatabase();
-    if (Platform.OS !== 'web') {
-      try {
-        const { createExpoLocationProvider, setLocationProvider } = await import('@/services/locationProvider');
-        setLocationProvider(await createExpoLocationProvider());
-      } catch {
-        // 測試或權限環境可改用 Mock LocationProvider
+  const refresh = useCallback((): Promise<void> => {
+    if (refreshing.current) return refreshing.current;
+    const run = async () => {
+      setInitializationError(null);
+      configureKvStore(deviceKv);
+      await initializeAppDatabase();
+      if (Platform.OS !== 'web') {
+        try {
+          const { createExpoLocationProvider, setLocationProvider } = await import('@/services/locationProvider');
+          setLocationProvider(await createExpoLocationProvider());
+        } catch {
+          // 測試或權限環境可改用 Mock LocationProvider
+        }
       }
-    }
-    const deviceId = await getDeviceId();
-    const appVersion = await getAppVersion();
-    const complete = (await countTenants()) > 0;
-    setBootstrapComplete(complete);
-    const loaded = await loadSession();
-    if (!loaded) {
-      setSession(null);
-      setUser(null);
-      setTenant(null);
-      setRoles([]);
-      setPermissionKeys([]);
-      setCurrentSite(null);
-      setAuthorizedSites([]);
+      const deviceId = await getDeviceId();
+      const appVersion = await getAppVersion();
+      const complete = (await countTenants()) > 0;
+      setBootstrapComplete(complete);
+      const loaded = await loadSession();
+      if (!loaded) {
+        setSession(null);
+        setUser(null);
+        setTenant(null);
+        setRoles([]);
+        setPermissionKeys([]);
+        setCurrentSite(null);
+        setAuthorizedSites([]);
+        setActor({
+          userId: null,
+          fullName: '系統',
+          account: 'system',
+          roleSnapshot: 'SYSTEM',
+          tenantId: null,
+          siteId: null,
+          deviceId,
+          appVersion,
+        });
+        setReady(true);
+        return;
+      }
+      const nextUser = await getUserById(loaded.userId, loaded.tenantId);
+      if (!nextUser || nextUser.status !== 'active' || nextUser.tenantId !== loaded.tenantId) {
+        await clearSession();
+        setSession(null);
+        setUser(null);
+        setTenant(null);
+        setRoles([]);
+        setPermissionKeys([]);
+        setCurrentSite(null);
+        setAuthorizedSites([]);
+        setActor({ userId: null, fullName: '系統', account: 'system', roleSnapshot: 'SYSTEM', tenantId: null, siteId: null, deviceId, appVersion });
+        setReady(true);
+        return;
+      }
+      const nextTenant = await getTenantById(nextUser.tenantId);
+      const nextRoles = await getEffectiveRoles(nextUser.id, nextUser.tenantId);
+      const keys = await getEffectivePermissionKeys(nextUser);
+      const sites = await getAuthorizedSites(nextUser);
+      const site = await getCurrentSite(nextUser);
+      const snapshot = await roleSnapshotForUser(nextUser.id, nextUser.tenantId);
+      setSession(loaded);
+      setUser(nextUser);
+      setTenant(nextTenant);
+      setRoles(nextRoles);
+      setPermissionKeys(keys);
+      setAuthorizedSites(sites);
+      setCurrentSite(site);
       setActor({
-        userId: null,
-        fullName: '系統',
-        account: 'system',
-        roleSnapshot: 'SYSTEM',
-        tenantId: null,
-        siteId: null,
+        userId: nextUser.id,
+        fullName: nextUser.fullName,
+        account: nextUser.account,
+        roleSnapshot: snapshot,
+        tenantId: nextUser.tenantId,
+        siteId: site?.id ?? null,
         deviceId,
         appVersion,
       });
       setReady(true);
-      return;
-    }
-    const nextUser = await getUserById(loaded.userId, loaded.tenantId);
-    if (!nextUser || nextUser.status !== 'active' || nextUser.tenantId !== loaded.tenantId) {
-      await clearSession();
-      setSession(null);
-      setUser(nextUser);
-      setReady(true);
-      return;
-    }
-    const nextTenant = await getTenantById(nextUser.tenantId);
-    const nextRoles = await getEffectiveRoles(nextUser.id, nextUser.tenantId);
-    const keys = await getEffectivePermissionKeys(nextUser);
-    const sites = await getAuthorizedSites(nextUser);
-    const site = await getCurrentSite(nextUser);
-    const snapshot = await roleSnapshotForUser(nextUser.id, nextUser.tenantId);
-    setSession(loaded);
-    setUser(nextUser);
-    setTenant(nextTenant);
-    setRoles(nextRoles);
-    setPermissionKeys(keys);
-    setAuthorizedSites(sites);
-    setCurrentSite(site);
-    setActor({
-      userId: nextUser.id,
-      fullName: nextUser.fullName,
-      account: nextUser.account,
-      roleSnapshot: snapshot,
-      tenantId: nextUser.tenantId,
-      siteId: site?.id ?? null,
-      deviceId,
-      appVersion,
-    });
-    setReady(true);
+    };
+    refreshing.current = run().catch((error: unknown) => {
+      setInitializationError(error instanceof Error ? error.message : '系統無法啟動，請重試。');
+      setReady(false);
+      throw error;
+    }).finally(() => { refreshing.current = null; });
+    return refreshing.current;
   }, []);
 
   const selectSite = useCallback(
@@ -184,6 +203,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<SessionContextValue>(
     () => ({
       ready,
+      initializationError,
       bootstrapComplete,
       session,
       user,
@@ -199,6 +219,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       ready,
+      initializationError,
       bootstrapComplete,
       session,
       user,

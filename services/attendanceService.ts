@@ -1,3 +1,4 @@
+import { operationalNowIso } from './clockProvider';
 import { CLOCK_METHODS } from '@/constants/workforce';
 import {
   getAttendanceById,
@@ -21,10 +22,10 @@ import { requireActorPermission } from './access';
 import type { ActorContext } from './actor';
 import { writeAudit } from './auditService';
 import { getLocationProvider } from './locationProvider';
+import { scanQr } from './qrScannerService';
 import { requireActorTenant, requireSiteInTenant, requireUserInTenant, TenantAccessError } from './tenantGuard';
 import { userHasSiteAuthorization } from './workforceWarningService';
 
-const QR_NOT_READY = '此案場設定需要 QR 驗證，QR 模組尚未啟用';
 
 export class GpsClockError extends Error {
   readonly distanceMeters?: number;
@@ -38,13 +39,18 @@ export class GpsClockError extends Error {
   }
 }
 
-async function resolveClockLocation(actor: ActorContext, siteId: string, tenantId: string) {
+async function resolveClockLocation(actor: ActorContext, siteId: string, tenantId: string, siteQrCode?: string) {
   const site = await requireSiteInTenant(siteId, tenantId);
+  if (site.status !== 'active') throw new Error('此案場已停用');
   if (site.requireSiteQr) {
-    throw new Error(QR_NOT_READY);
+    if (!siteQrCode?.trim()) throw new Error('請掃描目前案場的 QR 完成打卡驗證');
+    const result = await scanQr(actor, siteQrCode);
+    if (result.scanResult !== 'valid' || !result.log || result.asset?.assetType !== 'site' || result.site?.siteId !== site.id) {
+      throw new Error(result.scanResult === 'valid' ? '請掃描目前案場的 QR' : result.message);
+    }
   }
   if (!site.requireGps) {
-    return { site, latitude: null as number | null, longitude: null as number | null, distance: null as number | null, method: CLOCK_METHODS.MANUAL };
+    return { site, latitude: null as number | null, longitude: null as number | null, distance: null as number | null, method: site.requireSiteQr ? CLOCK_METHODS.QR : CLOCK_METHODS.MANUAL };
   }
   const result = await getLocationProvider().getCurrentPosition();
   if (!result.ok) {
@@ -93,7 +99,7 @@ async function resolveClockLocation(actor: ActorContext, siteId: string, tenantI
     latitude: result.fix.latitude,
     longitude: result.fix.longitude,
     distance,
-    method: CLOCK_METHODS.GPS,
+    method: site.requireSiteQr ? CLOCK_METHODS.GPS_QR : CLOCK_METHODS.GPS,
   };
 }
 
@@ -135,9 +141,9 @@ export function evaluateAttendanceStatus(input: {
   return computeAttendanceStatus(input);
 }
 
-export async function clockIn(
+async function clockInUnlocked(
   actor: ActorContext,
-  input: { siteId: string; scheduleId?: string | null; at?: string; note?: string | null },
+  input: { siteId: string; scheduleId?: string | null; note?: string | null; siteQrCode?: string },
 ): Promise<AttendanceRecord> {
   const tenantId = requireActorTenant(actor);
   await requireActorPermission(actor, 'attendance.clock');
@@ -146,7 +152,7 @@ export async function clockIn(
   if (!(await userHasSiteAuthorization(user.id, tenantId, input.siteId))) {
     throw new Error('沒有此案場授權');
   }
-  const located = await resolveClockLocation(actor, input.siteId, tenantId);
+  const located = await resolveClockLocation(actor, input.siteId, tenantId, input.siteQrCode);
   const settings = await requireWorkforceSettings(tenantId);
   let schedule = input.scheduleId ? await getWorkScheduleById(input.scheduleId, tenantId) : null;
   if (input.scheduleId && !schedule) {
@@ -156,6 +162,9 @@ export async function clockIn(
   }
   if (schedule && schedule.userId !== user.id) {
     throw new Error('只能為自己的班表打卡');
+  }
+  if (schedule && (schedule.siteId !== input.siteId || !['scheduled', 'confirmed'].includes(schedule.status))) {
+    throw new Error('班表案場不符或班表已取消／完成');
   }
   const existingOpen = await getOpenAttendance(tenantId, user.id, located.site.id);
   if (existingOpen) {
@@ -167,7 +176,8 @@ export async function clockIn(
       throw new Error('此班表已打過上班卡');
     }
   }
-  const at = input.at ?? nowIso();
+  const at = operationalNowIso();
+  await revalidateClockActor(actor, input.siteId, tenantId);
   const record = await insertAttendance({
     tenantId,
     siteId: located.site.id,
@@ -206,15 +216,16 @@ export async function clockIn(
   return updated;
 }
 
-export async function clockOut(
+async function clockOutUnlocked(
   actor: ActorContext,
-  input: { siteId: string; attendanceId?: string; at?: string; note?: string | null },
+  input: { siteId: string; attendanceId?: string; note?: string | null; siteQrCode?: string },
 ): Promise<AttendanceRecord> {
   const tenantId = requireActorTenant(actor);
   await requireActorPermission(actor, 'attendance.clock');
   if (!actor.userId) throw new Error('缺少操作者');
   const user = await requireUserInTenant(actor.userId, tenantId);
-  const located = await resolveClockLocation(actor, input.siteId, tenantId);
+  if (!(await userHasSiteAuthorization(user.id, tenantId, input.siteId))) throw new Error('沒有此案場授權');
+  const located = await resolveClockLocation(actor, input.siteId, tenantId, input.siteQrCode);
   const open = input.attendanceId
     ? await getAttendanceById(input.attendanceId, tenantId)
     : await getOpenAttendance(tenantId, user.id, located.site.id);
@@ -224,12 +235,13 @@ export async function clockOut(
   if (open.userId !== user.id) {
     throw new Error('只能為自己下班打卡');
   }
+  if (open.siteId !== input.siteId) throw new Error('只能在原出勤案場下班打卡');
   if (open.clockOutAt) {
     throw new Error('此筆出勤已下班打卡');
   }
   const settings = await requireWorkforceSettings(tenantId);
   const schedule = open.scheduleId ? await getWorkScheduleById(open.scheduleId, tenantId) : null;
-  const at = input.at ?? nowIso();
+  const at = operationalNowIso();
   const status = computeAttendanceStatus({
     scheduledStartAt: schedule?.scheduledStartAt,
     scheduledEndAt: schedule?.scheduledEndAt,
@@ -238,6 +250,7 @@ export async function clockOut(
     lateGraceMinutes: settings.lateGraceMinutes,
     earlyLeaveGraceMinutes: settings.earlyLeaveGraceMinutes,
   });
+  await revalidateClockActor(actor, input.siteId, tenantId);
   const updated = await updateAttendance(open.id, tenantId, {
     clockOutAt: at,
     clockOutLatitude: located.latitude,
@@ -284,6 +297,16 @@ export async function requestAttendanceCorrection(
     const existing = await getAttendanceById(input.attendanceId);
     if (existing) throw new TenantAccessError();
     throw new Error('找不到出勤紀錄');
+  }
+  if (!(await userHasSiteAuthorization(user.id, tenantId, input.siteId))) throw new Error('沒有此案場授權');
+  if (attendance && (attendance.userId !== user.id || attendance.siteId !== input.siteId)) {
+    throw new Error('只能補正自己在目前案場的出勤');
+  }
+  const scheduleId = input.scheduleId ?? attendance?.scheduleId ?? null;
+  if (attendance && input.scheduleId && input.scheduleId !== attendance.scheduleId) throw new Error('補卡班表與原出勤不符');
+  if (scheduleId) {
+    const schedule = await getWorkScheduleById(scheduleId, tenantId);
+    if (!schedule || schedule.userId !== user.id || schedule.siteId !== input.siteId) throw new Error('補卡班表與本人及案場不符');
   }
   const created = await insertCorrectionRequest({
     tenantId,
@@ -395,3 +418,30 @@ export async function listCorrectionsForReview(actor: ActorContext) {
 }
 
 export { getAttendanceById, getOpenAttendance };
+
+// Serialize local clock actions per employee, including camera/manual retries.
+// Database transactions alone are not a mutex on the asynchronous adapters.
+const pendingClockActions = new Map<string, Promise<unknown>>();
+async function serializeClockAction<T>(actor: ActorContext, action: () => Promise<T>): Promise<T> {
+  const key = `${requireActorTenant(actor)}:${actor.userId ?? ''}`;
+  const previous = pendingClockActions.get(key) ?? Promise.resolve();
+  const pending = previous.catch(() => undefined).then(action);
+  pendingClockActions.set(key, pending);
+  try { return await pending; }
+  finally { if (pendingClockActions.get(key) === pending) pendingClockActions.delete(key); }
+}
+
+async function revalidateClockActor(actor: ActorContext, siteId: string, tenantId: string): Promise<void> {
+  await requireActorPermission(actor, 'attendance.clock');
+  if (!actor.userId || !(await userHasSiteAuthorization(actor.userId, tenantId, siteId))) throw new Error('沒有此案場授權');
+  const current = await requireSiteInTenant(siteId, tenantId);
+  if (current.status !== 'active') throw new Error('此案場已停用');
+}
+
+export function clockIn(actor: ActorContext, input: Parameters<typeof clockInUnlocked>[1]): Promise<AttendanceRecord> {
+  return serializeClockAction(actor, () => clockInUnlocked(actor, input));
+}
+
+export function clockOut(actor: ActorContext, input: Parameters<typeof clockOutUnlocked>[1]): Promise<AttendanceRecord> {
+  return serializeClockAction(actor, () => clockOutUnlocked(actor, input));
+}
